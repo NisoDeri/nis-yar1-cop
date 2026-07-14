@@ -1,0 +1,104 @@
+{
+  "standings": {
+    "nis-yar1": 10,
+    "rival-a": 10,
+    "rival-b": 10
+  },
+  "ranking": [
+    "nis-yar1",
+    "rival-a",
+    "rival-b"
+  ],
+  "rounds": [
+    {
+      "judge": "nis-yar1",
+      "player": "rival-a",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    },
+    {
+      "judge": "nis-yar1",
+      "player": "rival-b",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    },
+    {
+      "judge": "rival-a",
+      "player": "nis-yar1",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    },
+    {
+      "judge": "rival-a",
+      "player": "rival-b",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    },
+    {
+      "judge": "rival-b",
+      "player": "nis-yar1",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    },
+    {
+      "judge": "rival-b",
+      "player": "rival-a",
+      "outcome": "win",
+      "scores": {
+        "player": 3,
+        "judge": 2
+      },
+      "questions_asked": 20,
+      "guess": {
+        "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+        "associative_word": "fairness"
+      },
+      "correct": true
+    }
+  ]
+}

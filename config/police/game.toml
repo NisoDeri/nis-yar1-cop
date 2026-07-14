@@ -1,0 +1,74 @@
+# POLICE peer — PRIVATE local settings only. Shared/agreed terms live in game.json.
+version = "0.1.0"
+
+[game]
+group_name = "nis-yar1"
+group_id = "nis-yar1"
+members = ["Nissim Deri", "Yarden Tziar"]
+sub_game_number = 1
+repos = { cop = "https://github.com/NisoDeri/nis-yar1-cop", thief = "https://github.com/NisoDeri/nis-yar1-thief" }
+mcp_servers = { cop = "http://127.0.0.1:8802/mcp", thief = "http://127.0.0.1:8801/mcp" }
+
+[belief]
+# BeliefV2 config (STRATEGY.md §2, D6) — all keys required by BeliefV2.__init__
+smell_trust_weight = 4.0
+hint_trust_prior = 0.5         # reliability coefficient r_0 (Beta ledger prior)
+sigma_obs = 0.1                # scent observation noise (emission-profile inversion §2.2)
+zero_scent_weight = 0.6        # negative-evidence weight for zero-scent cells (§2.3)
+resync_floor = 1.0e-8          # log-likelihood floor below which we resync belief
+motion_eta_thief = 2.0         # adversarial diffusion sharpness for thief role (§2.4)
+motion_eta_police = 1.5        # (when we're the thief, cop chases less sharply)
+kernel_mobility_mu = 0.6       # mobility weighting factor in the motion kernel
+kernel_mobility_k = 3          # reachable-cells horizon for the motion kernel
+lie_inversion = true           # invert caught-liar's hints into negative evidence (§2.5)
+lie_inversion_below = 0.3      # reliability threshold below which lie-inversion activates
+
+[police]
+barrier_finisher_p = 0.65    # trigger finisher (rule-46 capture) earlier; default 0.8
+cage_radius = 5               # start caging earlier on 7x7; default 2
+
+[thief]
+w_dist = 1.2                  # stronger flight-weight; default 1.0
+w_mob  = 0.5                  # stronger mobility bonus; default 0.4
+mobility_k = 4                # k-step horizon; default 3
+jail_min_mobility = 2         # stay same; default 2
+
+[strategy]
+police_class = "pursuit.strategy.police:InterceptorPoliceBrain"
+thief_class = "pursuit.strategy.thief:SurvivorThiefBrain"
+
+[trash_talk]
+provider = "template"          # template | ollama; gauntlet champion set after lab E10
+model = "qwen3:14b"
+interpreter_model = "qwen2.5:7b"
+every_n_steps = 2
+deadline_seconds = 8
+ollama_url = "http://localhost:11434"
+
+[llm_defense]
+injection_penalty = 0.25
+max_lie_rate = 0.35
+
+[network]
+my_port = 8802
+opponent_url = "http://127.0.0.1:8801/mcp"
+turn_timeout_seconds = 180
+poll_interval_seconds = 0.5
+connect_timeout_seconds = 60
+retry_interval_seconds = 1.0
+audit_send_timeout_seconds = 10
+
+[email]
+recipient = "rmisegal+uoh26finalgame@gmail.com"
+enabled = false
+credentials_dir = "secrets"    # git-ignored; HW6 OAuth send-only token
+
+[paths]
+logs_dir = "logs"
+
+[play]
+step_speed_seconds = 0.5
+seed = 1234
+
+[fsm]
+max_illegal_events = 3      # K consecutive rule-5 breaches end the sub-game (architecture 7.1)

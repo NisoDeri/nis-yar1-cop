@@ -1,0 +1,248 @@
+{
+  "group_name": "nis-yar1",
+  "students": [
+    "Nissim Deri",
+    "Yarden Tziar"
+  ],
+  "github_repo": "https://github.com/NisoDeri/Orchestration-final-project",
+  "project": {
+    "name": "q20",
+    "group": "nis-yar1",
+    "course": "Orchestration of AI Agents",
+    "lecturer": "Dr. Yoram Segal",
+    "authors": [
+      "Nissim Deri",
+      "Yarden Tziar"
+    ],
+    "github_repo": "https://github.com/NisoDeri/Orchestration-final-project",
+    "timezone": "Asia/Jerusalem"
+  },
+  "public_view": {
+    "hint": "A schedule where everyone plays everyone, so standings reward consistency.",
+    "chain": [
+      "league",
+      "schedule",
+      "everyone-plays-everyone",
+      "fairness"
+    ]
+  },
+  "questions": [
+    {
+      "text": "What type of league structure ensures every team plays against each other?",
+      "options": [
+        "round-robin",
+        "group stages",
+        "playoffs",
+        "conference-based"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "How does a round-robin schedule promote fairness in competition?",
+      "options": [
+        "equal playing time",
+        "rotating opponents",
+        "double rounds for top teams",
+        "no byes for anyone"
+      ],
+      "chosen": 3
+    },
+    {
+      "text": "In a round-robin, what happens if two teams have the same record?",
+      "options": [
+        "tiebreaker games",
+        "shared championship",
+        "playoff match",
+        "no winner"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "Which scenario is more consistent in a round-robin: winning or losing streaks?",
+      "options": [
+        "winning",
+        "losing",
+        "staying the same",
+        "fluctuating"
+      ],
+      "chosen": 3
+    },
+    {
+      "text": "Is it easier to predict standings in a round-robin or a league with fixed groups?",
+      "options": [
+        "round-robin",
+        "fixed groups",
+        "same",
+        "unclear"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "What is the primary benefit of a round-robin schedule for players and fans?",
+      "options": [
+        "more games to watch",
+        "fairer competition",
+        "less travel",
+        "higher ticket prices"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "How often do teams play each other in a typical round-robin season?",
+      "options": [
+        "once",
+        "twice",
+        "four times",
+        "every week"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "Are byes common in a round-robin format?",
+      "options": [
+        "yes",
+        "no",
+        "only for top teams",
+        "rarely"
+      ],
+      "chosen": 2
+    },
+    {
+      "text": "Can a team finish first without playing every other team?",
+      "options": [
+        "yes, with a perfect record",
+        "no, must beat everyone",
+        "only in special cases",
+        "it's very unlikely"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "Which professional sports leagues primarily use round-robin scheduling?",
+      "options": [
+        "NFL",
+        "NBA",
+        "Premier League",
+        "all of the above"
+      ],
+      "chosen": 2
+    },
+    {
+      "text": "Does a round-robin schedule account for home field advantage?",
+      "options": [
+        "yes, each team plays some games at home",
+        "no, all games are neutral sites",
+        "it varies by league",
+        "not relevant in a round-robin"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "How do tiebreakers work in a round-robin if two teams finish with identical records?",
+      "options": [
+        "head-to-head results",
+        "goal difference",
+        "goals scored",
+        "coin toss"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "Is it possible for a team to have a perfect record in a round-robin without losing any games?",
+      "options": [
+        "yes, 100% win rate",
+        "no, at least one loss is required",
+        "it depends on the schedule",
+        "impossible in most leagues"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "Do fans generally prefer a round-robin format or a playoff system?",
+      "options": [
+        "round-robin",
+        "playoffs",
+        "it's equal",
+        "they don't care"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "How does a round-robin schedule impact team strategy throughout the season?",
+      "options": [
+        "encourages aggressive play",
+        "focuses on consistency",
+        "allows for rest and recovery",
+        "disrupts established patterns"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "Are there any major drawbacks to using a round-robin format?",
+      "options": [
+        "longer seasons",
+        "fewer overall games",
+        "increased travel",
+        "none found"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "Can a team with an inconsistent record still win the championship in a round-robin?",
+      "options": [
+        "yes, if they finish first",
+        "no, consistency is key",
+        "it depends on other teams' records",
+        "impossible without a perfect record"
+      ],
+      "chosen": 1
+    },
+    {
+      "text": "How does a round-robin schedule affect player workloads compared to a traditional season?",
+      "options": [
+        "lessens workload due to fewer games",
+        "increases workload with more games",
+        "has no impact",
+        "varies by team"
+      ],
+      "chosen": 3
+    },
+    {
+      "text": "Do all sports leagues use the same criteria for determining champions in round-robin formats?",
+      "options": [
+        "yes, every league is consistent",
+        "no, each league has its own rules",
+        "most do, but some vary",
+        "it depends on the sport"
+      ],
+      "chosen": 0
+    },
+    {
+      "text": "Is it related to the chain?",
+      "options": [
+        "league",
+        "schedule",
+        "everyone-plays-everyone",
+        "fairness"
+      ],
+      "chosen": 0
+    }
+  ],
+  "guess": {
+    "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+    "associative_word": "fairness"
+  },
+  "truth": {
+    "opening_sentence": "A round-robin tournament guarantees that every competitor faces every other exactly once.",
+    "associative_word": "fairness"
+  },
+  "outcome": "win",
+  "scores": {
+    "player": 3,
+    "judge": 2
+  },
+  "models": {
+    "judge": "qwen2.5:7b",
+    "player": "aya-expanse:8b"
+  }
+}

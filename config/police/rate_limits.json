@@ -1,0 +1,33 @@
+{
+  "_note": "Per-service Gatekeeper limits (book Appendix F table 19 minimums). Three gates: daily quota -> token bucket -> DOS circuit-breaker.",
+  "gmail": {
+    "daily_quota": 50,
+    "requests_per_minute": 30,
+    "concurrent_requests": 2,
+    "retry_backoff_sec": 5,
+    "max_retries": 3,
+    "queue_depth": 100,
+    "dos_burst_threshold": 10,
+    "dos_window_sec": 60
+  },
+  "ollama": {
+    "daily_quota": 5000,
+    "requests_per_minute": 60,
+    "concurrent_requests": 1,
+    "retry_backoff_sec": 2,
+    "max_retries": 2,
+    "queue_depth": 20,
+    "dos_burst_threshold": 30,
+    "dos_window_sec": 60
+  },
+  "opponent_mcp": {
+    "daily_quota": 100000,
+    "requests_per_minute": 120,
+    "concurrent_requests": 2,
+    "retry_backoff_sec": 1,
+    "max_retries": 3,
+    "queue_depth": 100,
+    "dos_burst_threshold": 60,
+    "dos_window_sec": 60
+  }
+}

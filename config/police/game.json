@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.3",
+  "_note": "Shared, agreed game terms (book Appendix F). BOTH peers hold a byte-identical copy; the pre-game signature exchange refuses to play on any mismatch. Per-game copies are generated as config_<game_id>_g<NN>.json.",
+  "agreed_between": ["nis-yar1", "<opponent-group-id>"],
+  "board_and_agents": {
+    "grid_size": 7,
+    "num_agents": 2,
+    "thief_start": [3, 3],
+    "cop_start": [0, 0],
+    "axis_origin_corner": "top-left",
+    "axis_start_index": 0
+  },
+  "world": {
+    "map_area": "New York",
+    "hint_max_words": 15
+  },
+  "movement_and_barriers": {
+    "move_set": ["N", "S", "E", "W", "STAY"],
+    "max_barriers": 14,
+    "max_moves": 35,
+    "survival_threshold": 35,
+    "barrier_reach": "own_cell_plus_orthogonal"
+  },
+  "scoring": {
+    "capture_cop": 20,
+    "capture_thief": 5,
+    "survival_cop": 5,
+    "survival_thief": 10,
+    "tie_score": 2,
+    "technical_loss": 0
+  },
+  "pheromones": {
+    "dialect": "reference",
+    "pheromone_center_intensity": 0.9,
+    "pheromone_decay": 0.1,
+    "pheromone_grid_size": 5,
+    "pheromone_min_center_intensity": 0.5,
+    "_note": "reference = subtractive decay + radial emit (league conformance kit CORE; byte-exact vs vectors/pheromone.json). book (multiplicative) kept in-engine, selectable by rule-23 lock. Our BeliefV2 inverts THIS emission model to read the opponent's snapshot, so it must match the peer's dialect."
+  },
+  "crypto": {
+    "dialect": "reference",
+    "_note": "reference = SHA256(canonical_json(payload)|nonce): the league conformance-kit CORE form (github.com/Imreec/copthief-league-protocol; byte-exact vs vectors/commit_reveal.json + terms_signature.json), and the only one of the release's 3 published constructions that binds the FULL record. book (nonce-inside-JSON, ruling A1) also binds the full record and stays implemented, selectable by rule-23 lock. Default flipped book->reference for day-one league interop (academic-freedom clause; printed listings non-binding)."
+  },
+  "network_and_league": {
+    "response_timeout_sec": 30,
+    "watchdog_timeout_sec": 60,
+    "num_games": 6,
+    "diversity_reward": 10,
+    "min_games_to_pass": 2,
+    "max_games_per_team": 10,
+    "token_budget_per_series": 200000
+  },
+  "rate_limiter_gatekeeper": {
+    "requests_per_minute": 30,
+    "concurrent_requests": 2,
+    "retry_backoff_sec": 5,
+    "max_retries": 3,
+    "queue_depth": 100
+  }
+}

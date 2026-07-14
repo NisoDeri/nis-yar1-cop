@@ -1,0 +1,696 @@
+# TODO — Final Project: Distributed Cops-and-Robbers over P2P (group nis-yar1)
+
+**Progress:** 410/648 tasks verified complete — updated 2026-07-14 (post core-todos workflow). Stages 0-3 largely done (per-stage git branches/merges + a few docs pending), Stage 4 scent/belief done + Ollama trash-talk & hint-interpreter now BUILT+WIRED (claude stubs + token accounting + deception pending), Stage 6 crypto/sign/audit + dialect-aware replay-verify done (scent-lock ceremony pending), Stage 7 3-gate Gatekeeper + 4 JSON artifacts + Gmail-gated send + live GUI (PeerRuntime observer) now BUILT+WIRED (full report emit + screenshots pending); Stages 5, 8, 9 pending. Line-budget gate now passes everywhere (series.py split 147 + series_log.py 47; all src <=150) — FULL per-stage verify tasks still unchecked (per-stage CI branches + coverage runs not executed).
+
+**Task count: 648** (was 617; +11 Stage-6 addendum tasks from the 2026-07-13 NotebookLM rulings; +1 Stage-8 interop-conformance task 2026-07-14; course band 500–1000; target band 600–800 met). Per stage: S0 56 · S1 96 · S2 86 · S3 57 · S4 90 · S5 24 · S6 76 · S7 71 · S8 40 · S9 52.
+Format: `- [ ] T<stage>.<seq> <task>`. Stages 1–7 match the seven PRDs / the brief §14 roadmap; Stage 0 = workshop setup, Stage 8 = league operations, Stage 9 = submission.
+Every task conforms to `FINAL_PROJECT_BRIEF.md`, `planning/reference_map.md`, and `planning/DECISIONS.md` (D1–D14). One commit-sized action per task. Course gates apply to every implementation task: file ≤150 lines, ruff (E,F,W,I,N,UP,B,C4,SIM) clean, config-driven (zero hardcoded params), tests use injected fakes (no network/model in CI).
+
+---
+
+## Stage 0 — workshop setup
+
+- [ ] T0.1 create feature branch `feat/stage0-workshop` off main (D11 branch-per-capability)
+- [x] T0.2 run `uv init` with `src/pursuit/` package layout in the workshop repo (package working name per plan.md/architecture.md)
+- [ ] T0.3 pin `requires-python = ">=3.13"` in pyproject.toml (reference runtime parity, D1)  <!-- partial: pinned >=3.11, not >=3.13 -->
+- [x] T0.4 add runtime dependency `fastmcp>=3.4.3` via `uv add` (reference interop pin, D1)  <!-- note: fastmcp pinned >=2.0, not >=3.4.3 -->
+- [ ] T0.5 add dev deps ruff, pytest, pytest-cov, pytest-timeout via `uv add --dev`  <!-- partial: no pytest-timeout dep -->
+- [x] T0.6 commit `uv.lock`; verify `uv sync` reproduces the env from a clean clone
+- [x] T0.7 configure ruff select E,F,W,I,N,UP,B,C4,SIM in pyproject (course gate)
+- [x] T0.8 set ruff line-length + target-version; verify `uv run ruff check .` passes on the empty scaffold
+- [x] T0.9 configure pytest in pyproject: testpaths, `--cov=src --cov-fail-under=85`
+- [x] T0.10 write `tools/check_line_budget.py` failing when any src .py file exceeds 150 lines  <!-- note: at scripts/check_line_budget.py, not tools/ -->
+- [ ] T0.11 unit-test check_line_budget against fixture files of 150 and 151 lines
+- [ ] T0.12 write `tools/check_no_hardcoded.py` flagging Appendix-F literals (7, 0.9, 0.10, 14, 35, 20, 5, 10) in src outside config loaders/tests
+- [ ] T0.13 unit-test check_no_hardcoded on a fixture module with a smuggled literal
+- [ ] T0.14 add GitHub Actions CI: uv sync → ruff → line budget → no-hardcoded → pytest with coverage gate
+- [ ] T0.15 verify CI runs green on the scaffold commit
+- [ ] T0.16 add pre-commit hook running ruff + line-budget locally
+- [x] T0.17 write `.gitignore` covering credentials.json, token.json, .env, logs/, __pycache__, .coverage (rules 39–40)
+- [ ] T0.18 add `.env-example` documenting every env var (ngrok token, Gmail paths, Ollama URL) with placeholders (D11)
+- [x] T0.19 add secret-scan step (credential patterns) to CI
+- [x] T0.20 create `config/police/` and `config/thief/` dirs with placeholder private game.toml (rule 2, D2)
+- [ ] T0.21 create `config/shared/game.json.template` holding every Appendix-F default from brief §10
+- [ ] T0.22 document config precedence (private game.toml vs shared signed game.json) in config/README.md
+- [ ] T0.23 create package skeleton: domain/, peer/, strategy/, infra/, shared/, report/, gui/, replay/, sdk/, lab/ with __init__.py  <!-- partial: no report/gui/replay dirs (interface/ used instead) -->
+- [ ] T0.24 create tests/ mirror tree with per-package conftest.py
+- [ ] T0.25 write shared/version.py exposing `__version__` + code_version string for step-0
+- [x] T0.26 write docs/INITIAL.md: mission paragraph + the four grading axes (Coordination/Adaptation/Integrity/Architecture)
+- [x] T0.27 write docs/prd/PRD-MASTER.md: scope, 7-stage roadmap, D1–D14 cross-references
+- [x] T0.28 write docs/prd/PRD-1 … PRD-7 stubs, one per roadmap stage (brief §14), each citing its book chapter
+- [x] T0.29 write docs/PLAN.md mapping stages onto the D12 weekly timeline (W1–W4 + buffer)
+- [x] T0.30 cross-link DECISIONS D-ids from every PRD stub (traceability)
+- [x] T0.31 write docs/LEAGUE-OPS.md skeleton with the D13 negotiation-checklist headings
+- [x] T0.32 write docs/STRATEGY.md stub (filled at stages 3–4)
+- [ ] T0.33 write docs/RESEARCH-REPORT-Performance-Analysis.md stub (brief §15)
+- [x] T0.34 write docs/INTEROP.md stub seeded from reference_map §3 + §10
+- [ ] T0.35 write CONTRIBUTING.md: conventional-commit template + feature-branch workflow (book App C)
+- [ ] T0.36 write README.md skeleton with the 6 mandatory academic components as empty sections (brief §13)  <!-- partial: no root README.md yet -->
+- [x] T0.37 add EULA/attribution note: reference repo studied not copied; in-code attribution policy (D1)
+- [x] T0.38 implement shared/config.py: load + validate private game.toml (split loader/validator to stay ≤150)
+- [x] T0.39 implement shared/config_shared.py: load shared game.json overlay incl. gatekeeper/timeout keys the reference drops (map §6 trap)
+- [ ] T0.40 validate game.json schema_version on load; ConfigError on mismatch (map gap: never validated)
+- [x] T0.41 unit-test config: missing required key fails fast naming the key (no code defaults)
+- [x] T0.42 unit-test config: private turn_timeout never overrides the agreed shared response_timeout (map §6 trap)
+- [x] T0.43 unit-test config: shared terms serialize byte-identically from both role dirs
+- [x] T0.44 unit-test config: type preservation (int stays int) through load/merge (negotiation needs exact types)
+- [x] T0.45 implement domain/exceptions.py: SimulationError root + Config/Move/Crypto/RateLimit/Provider errors + RestartSeries signal
+- [ ] T0.46 unit-test the exception hierarchy (isinstance chains, RestartSeries is not an error subclass misuse)
+- [ ] T0.47 write tools/new_game_config.py generating `config_<game_id>_g<NN>.json` from the template (brief §10 config rules)
+- [ ] T0.48 unit-test new_game_config filename derivation from game_id + sub-game NN
+- [ ] T0.49 add task aliases (lint / test / budget / lab) via uv scripts or a tasks file
+- [ ] T0.50 record machine-spec baseline (RTX 3500 Ada 12GB laptop) in docs/hardware-baseline.md for the computational-fairness story (D9)
+- [x] T0.51 add run scripts for the two-terminal local pattern (peer --role police / --role thief) per brief §15
+- [ ] T0.52 create GitHub milestones/issues per stage mapped to the 2026-08-12 deadline (D12)
+- [ ] T0.53 open one tracking issue per stage PRD linking its TODO section
+- [x] T0.54 ruff + line-budget pass on all Stage 0 modules
+- [ ] T0.55 dry-run full gate: `uv run pytest` green with coverage report on CI
+- [ ] T0.56 merge `feat/stage0-workshop` to main after CI green
+
+## Stage 1 — Base Logic (PRD-1, brief §14.1: grid, movement, barriers, capture — single process)
+
+- [x] T1.1 create feature branch `feat/stage1-base-logic`  <!-- note: landed on branch feat/s1-domain-core (Stage 0+1 combined) -->
+- [x] T1.2 implement domain/constants.py: Role, MoveType (MOVE/BARRIER/HOLD), Direction enums + DELTAS with N=(-1,0) (row grows south)
+- [x] T1.3 implement directions_from_move_set raising ConfigError on unknown/empty tokens — no silent king fallback (D4, map gap 4)
+- [x] T1.4 add interop literals: NONCE_BYTES=16, VERDICT_TRUTH/LIE, FALLBACK_HINT, FINAL_CAUGHT_HINT="You got me.", NO_HINT_PLACEHOLDER="(silence)" (map §3.2)
+- [x] T1.5 test: DELTAS N=(-1,0), S=(1,0), E=(0,1), W=(0,-1) match top-left origin, 0-indexed, row-down axis (brief §4)
+- [x] T1.6 test: move_set ["N","S","E","W","STAY"] yields exactly the 4 orthogonal directions, STAY dropped
+- [x] T1.7 test: move_set containing "NE" raises ConfigError (diagonals impossible by construction)
+- [x] T1.8 test: empty move_set raises ConfigError (no FULL-KING fallback ever)
+- [x] T1.9 ruff + line-budget check domain/constants.py
+- [x] T1.10 implement domain/board.py Board(size, moves) with step(origin, direction, barriers) as the single physics primitive
+- [x] T1.11 implement Board.legal_moves(pos, barriers) returning [(Direction, Cell)]
+- [x] T1.12 implement Board.neighbors + Board.distance (Manhattan under orthogonal move set)
+- [x] T1.13 test: step rejects a diagonal direction under the orthogonal move set (rule 13)
+- [x] T1.14 test: step off-board returns None on all 4 edges and all 4 corners
+- [x] T1.15 test: step into a barrier cell returns None
+- [x] T1.16 test: legal_moves at corner (0,0) with no barriers has exactly 2 entries
+- [x] T1.17 test: legal_moves excludes barriered neighbor cells
+- [x] T1.18 test: distance((0,0),(3,3)) == 6 Manhattan under the orthogonal set
+- [x] T1.19 test: STAY/HOLD is always available even when all neighbors are blocked (movement rule: stay put is a move)
+- [x] T1.20 property test: Board is stateless — repeated identical calls return identical results
+- [x] T1.21 test: board size flows from config; no literal 7 inside board.py (no-hardcoded gate)
+- [x] T1.22 ruff + line-budget check domain/board.py
+- [x] T1.23 implement domain/own_state.py OwnGameState: position, visited set, merged barrier set, my_barriers counter, step_number, per-step JSON log
+- [x] T1.24 implement OwnGameState.apply_move(move_type, direction, barriers_max) as the single legality gate returning bool
+- [x] T1.25 implement note_barrier(cell) merging opponent-declared barriers into the local barrier set
+- [x] T1.26 implement BARRIER with direction=None = placement on the cop's own cell (5th option — D4, map gap 3)
+- [x] T1.27 test: MOVE updates position + visited and increments step_number
+- [x] T1.28 test: illegal MOVE returns False and leaves state fully untouched
+- [x] T1.29 test: HOLD increments step_number without changing position
+- [x] T1.30 test: BARRIER with direction=None places on the cop's own cell (D4)
+- [x] T1.31 test: BARRIER accepted on each of the 4 orthogonally-adjacent cells when in-bounds and empty
+- [x] T1.32 test: BARRIER onto an existing barrier is rejected
+- [x] T1.33 test: BARRIER off-board is rejected
+- [x] T1.34 test: 15th barrier rejected when barriers_max=14 (quota from config)
+- [x] T1.35 test: 14th barrier accepted at exactly the quota boundary
+- [x] T1.36 test: barriers are irreversible — no API path removes a placed barrier
+- [x] T1.37 test: note_barrier'd opponent barriers constrain the peer's own legal moves
+- [x] T1.38 test: placing a barrier never changes the cop's position (forgoes moving, brief §4)
+- [x] T1.39 test: every action type (MOVE/BARRIER/HOLD) increments step_number by exactly 1
+- [x] T1.40 ruff + line-budget check domain/own_state.py
+- [x] T1.41 implement domain/rules.py GameRules(max_steps) with thief survival check on the locked counting mode
+- [x] T1.42 implement is_captured(state, claim): truthful land-on answer computed from local state, never from the brain (rule 21)
+- [x] T1.43 implement capture-by-barrier: barrier cell == thief's current cell → captured (rule 46, D4)
+- [x] T1.44 implement jailed-thief: thief with zero legal moves (barriers and/or board edges) → captured (rule 47, D4)
+- [x] T1.45 test: cop landing on the thief's cell → capture
+- [x] T1.46 test: capture claim for a non-matching cell answered False truthfully
+- [x] T1.47 test: barrier placed on the thief's current cell → capture (rule 46)
+- [x] T1.48 test: jailed thief with 3 barriers + 1 board edge counts as capture (rule 47)
+- [x] T1.49 test: jailed thief in a corner with 2 barriers counts as capture
+- [x] T1.50 test: thief with exactly one legal move is NOT jailed
+- [x] T1.51 test: jail check considers STAY semantics per the locked counting mode (if STAY counts as a legal move, walled-but-alive is negotiable — assert configured behavior)
+- [x] T1.52 test: survival triggers at step_number == max_steps (35) and not at 34
+- [x] T1.53 test: survival threshold honors a raised config value (e.g. 40) with no code change
+- [x] T1.54 implement the survival counting-mode flag (do HOLD/BARRIER count as "valid moves") as a negotiable config key (map landmine 5)
+- [x] T1.55 test: both counting modes produce the documented results on a fixture game
+- [x] T1.56 ruff + line-budget check domain/rules.py
+- [x] T1.57 implement domain/scoring.py score_subgame from scoring config keys (capture_cop/capture_thief/survival_cop/survival_thief)
+- [x] T1.58 implement technical-loss mapping: timeout/crash/forgery/unknown result string → 0/0 (D4)
+- [x] T1.59 implement aggregate(scores, tie_score): additive tie +2 each on equal cumulative series
+- [x] T1.60 test: capture scores cop 20 / thief 5 from config
+- [x] T1.61 test: survival scores cop 5 / thief 10 from config
+- [x] T1.62 test: timeout scores 0/0 for BOTH sides — never waiting-peer-wins (D4, map gap 5)
+- [x] T1.63 test: tamper_forfeit scores the cheater 0 regardless of board result (rule 19)
+- [x] T1.64 test: equal cumulative series score → tie 2/2 (Appendix F table 17)
+- [x] T1.65 add load-time assertion of scoring config against Appendix-F fixed values; drifted config fails fast (map gap 8)
+- [x] T1.66 test: scoring config with capture_cop=25 rejected at load (fixed value)
+- [x] T1.67 ruff + line-budget check domain/scoring.py
+- [x] T1.68 implement domain/game_ids.py derive_game_ids byte-identical to the reference (sorted gids, sha256[:16] → UUID) (D1, map §3.5)
+- [x] T1.69 test: game_id "<a>-vs-<b>" is sorted regardless of caller order
+- [x] T1.70 test: game_uid reproduces a recorded reference vector byte-for-byte
+- [x] T1.71 test: any changed term changes game_uid; swapped gid order does not
+- [x] T1.72 ruff + line-budget check domain/game_ids.py
+- [x] T1.73 implement a single-process scripted harness stepping two OwnGameStates on one 7×7 board (roadmap stage-1 deliverable)
+- [x] T1.74 harness test: scripted capture-by-landing game ends with correct scores
+- [x] T1.75 harness test: scripted barrier-cage game ends in jailed-thief capture
+- [x] T1.76 harness test: scripted 35-move survival game ends in survival
+- [x] T1.77 harness test: cop's barrier-declaration list equals the placed-barrier list every game (rule 14 truthful declaration)
+- [x] T1.78 property test: 1000 random legal games never yield an illegal state (agent on barrier / off board)
+- [x] T1.79 property test: step_number increments by exactly 1 per action across random action mixes
+- [x] T1.80 fuzz test: random illegal actions are always rejected with state unchanged
+- [x] T1.81 wire board_size, starts, move_set, barriers_max, max_steps, scoring from config into the harness — zero literals
+- [x] T1.82 test: thief_start (3,3) / cop_start (0,0) load from config and are overridable
+- [x] T1.83 test: axis_origin_corner + axis_start_index config keys parsed and validated (negotiable per brief §10)
+- [x] T1.84 implement minimum-raising validation: negotiables may only rise (board≥7, barriers≥14, steps≥35) (rule 12)
+- [x] T1.85 test: board_size=5 rejected; board_size=9 accepted and harness runs a 9×9 game
+- [x] T1.86 test: barriers_max=10 rejected; barriers_max=20 accepted
+- [x] T1.87 test: max_steps=30 rejected; max_steps=50 accepted
+- [x] T1.88 test: negative or out-of-board start coordinates rejected at config load
+- [x] T1.89 implement the game-lifecycle state machine: explicit state enum + transition table (SETUP→PLAYING→GAME_OVER + terminal reasons); every illegal transition raises (PRD-1 FR-1.8, rules 4–5)
+- [x] T1.90 test: lifecycle machine rejects illegal transitions (e.g. GAME_OVER→PLAYING) and records the terminal reason
+- [x] T1.91 harness test: scripted barrier-on-thief game ends in capture with correct Table 17 scores (rule 46; PRD-1 acceptance 1)
+- [x] T1.92 fill docs/prd/PRD-1-base-logic.md with final scope + acceptance criteria
+- [x] T1.93 document the physics invariants brains may rely on in docs/STRATEGY.md
+- [x] T1.94 stage-1 verify: ruff, line budget, pytest ≥85% coverage on domain/
+- [ ] T1.95 record stage-1 coverage number in the docs/PLAN.md progress table
+- [x] T1.96 merge `feat/stage1-base-logic` after CI green  <!-- note: merged as feat/s1-domain-core (292 tests, 100% cov) -->
+
+## Stage 2 — Basic FastMCP infrastructure (PRD-2, brief §14.2: two processes, localhost pipe)
+
+- [ ] T2.1 create feature branch `feat/stage2-mcp-infra`
+- [x] T2.2 implement domain/protocol.py TurnMessage with all wire fields (step/sender/hint/smell_grid/commit/timestamp/barrier_placed/capture_claim/claim_response/win_claim) (map §3.2)
+- [x] T2.3 implement TurnMessage.from_dict hard-failing with the NAMES of missing required fields (reference parity)
+- [x] T2.4 implement ControlMessage.from_dict silently dropping unknown keys (forward-compat, map §3.4)
+- [x] T2.5 implement AuditPayload (sender, result_claim, records) (map §3.3)
+- [x] T2.6 test: TurnMessage to_dict/from_dict round-trip preserves every field
+- [x] T2.7 test: from_dict missing `commit` raises TypeError naming "commit"
+- [x] T2.8 test: smell_grid uses "r,c" string keys with zero-intensity cells omitted (wire format)
+- [x] T2.9 test: barrier_placed/capture_claim/claim_response/win_claim default to null
+- [x] T2.10 test: ControlMessage with an unknown extra key parses cleanly (dropped)
+- [x] T2.11 ruff + line-budget check domain/protocol.py
+- [x] T2.12 implement infra/mcp_server.py start_peer_server(role, host, port): FastMCP HTTP server "police-thief-{role}" on a daemon thread
+- [x] T2.13 implement PeerInboxes: 4 queues (agreements/turns/audits/controls)
+- [x] T2.14 register exactly 4 tools — negotiate / receive_turn / submit_audit / receive_control — with reference param keys (`payload` only for submit_audit) (D1, map landmine 2)
+- [x] T2.15 tools enqueue and return {"ok": true} with zero validation; all enforcement stays local (reference parity)
+- [x] T2.16 add port-free preflight probe with an actionable error when the port is taken
+- [x] T2.17 snapshot test: tool names + param keys match the reference wire contract exactly (interop regression guard)
+- [x] T2.18 test: submit_audit called with key `message` fails schema validation (landmine 2 guard)
+- [x] T2.19 test: each tool enqueues into its own queue only
+- [x] T2.20 test: server binds host/port from config (thief 8801 / police 8802 defaults), no literals
+- [x] T2.21 ruff + line-budget check infra/mcp_server.py
+- [x] T2.22 implement infra/mcp_client.py McpTransport(opponent_url, inboxes) with all timeouts from config  <!-- note: McpTransport lives in infra/transport.py -->
+- [x] T2.23 implement retry-until-deadline: 1s interval, 60s connect / 10s audit / 2s control from config keys
+- [x] T2.24 implement exchange_audit best-effort both ways; None return is legal (map §2.5)
+- [x] T2.25 implement drain_inboxes clearing turns/controls/audits but NOT agreements
+- [x] T2.26 implement inbox dedup keyed on (sender, step) to defuse replayed-TurnMessage desync (hardening over reference)
+- [x] T2.27 test: a TurnMessage delivered twice is processed once (dedup)
+- [x] T2.28 test: retry loop stops at deadline and raises a transport error (no infinite spin)
+- [x] T2.29 test: drain_inboxes preserves the agreements queue
+- [x] T2.30 test: all transport timeouts flow from config; none hardcoded
+- [x] T2.31 ruff + line-budget check infra/mcp_client.py
+- [x] T2.32 implement peer/state_machine.py: guarded FSM with an explicit transition table (rules 4-5, D5)
+- [x] T2.33 define the internal states (BOOT→NEGOTIATING→OPP_TURN⇄MY_TURN→SENDING→GAME_OVER→AUDITING→DONE + PAUSED/ABORTED) + the allowed-transition table, projected onto the reference's 7 wire labels WAITING/THINKING/PLAYING/PAUSED/STOPPED/GAME_OVER/QUIT (architecture.md §4)
+- [x] T2.34 reject every illegal transition with StateTransitionError — never silent (rule 5)
+- [x] T2.35 log every transition with timestamp into the step log (audit trail)
+- [x] T2.36 test: GAME_OVER → PLAYING rejected
+- [x] T2.37 test: QUIT is terminal — every outgoing transition rejected
+- [x] T2.38 test: PAUSED → PLAYING allowed; WAITING → GAME_OVER via the abort path allowed
+- [x] T2.39 exhaustive matrix test: every (state, event) pair classified allowed/rejected per the architecture.md §4 table; anything absent raises
+- [x] T2.40 ruff + line-budget check peer/state_machine.py
+- [x] T2.41 implement peer/deadlines.py: per-wait deadline tracker driven by the shared response_timeout (30s) (rule 6)
+- [x] T2.42 decide + implement deadline-reset policy: reset only on TurnMessage, not on control chatter (fixes reference never-times-out drift); document in INTEROP.md
+- [x] T2.43 implement watchdog thread: freeze threshold (60s) from config + controlled log extraction on trigger (rule 7, D5)
+- [x] T2.44 implement crash handler dumping the in-progress step log before exit (controlled data extraction)
+- [x] T2.45 test: deadline expiry surfaces a timeout result within one poll interval (no hang)
+- [x] T2.46 test: control messages do NOT reset the turn deadline
+- [x] T2.47 test: watchdog fires at the configured threshold and writes the extraction file
+- [x] T2.48 test: watchdog threshold read from config; no literal 60
+- [x] T2.49 ruff + line-budget check peer/deadlines.py + watchdog module
+- [x] T2.50 implement peer/runtime.py lifecycle: connect → stage-2 stub handshake → FSM-guarded turn loop → summary
+- [x] T2.51 implement turn loop: poll inbox at network.poll_interval_seconds; implicit turn token = TurnMessage possession (map §2.4)
+- [x] T2.52 implement thief-moves-first convention (reference parity, map landmine 8)
+- [x] T2.53 implement timeout ending: technical loss 0/0 recorded for BOTH sides (D4)
+- [x] T2.54 implement turn_sender v0: numeric-geometry TurnMessage stub over localhost (roadmap stage-2 goal — prove the pipe)
+- [x] T2.55 implement turn_handler v0: fold the opponent move + barrier declaration into local state
+- [x] T2.56 implement local physics enforcement on incoming moves: reject diagonal/illegal → record opponent technical loss (rule 13, no referee)
+- [x] T2.57 implement structured per-step JSON logging (the future log_ artifact backbone)
+- [x] T2.58 test (fake transport): two in-process peers exchange 10 stub turns to completion
+- [x] T2.59 integration test [network marker]: a message crosses real HTTP FastMCP localhost between two processes
+- [x] T2.60 integration test [network marker]: silent opponent → timeout → both recorded 0/0
+- [x] T2.61 test: incoming diagonal move rejected and technical loss recorded
+- [x] T2.62 test: an incoming move through an undeclared barrier cell is flagged for audit
+- [x] T2.63 ruff + line-budget check peer/runtime.py, turn_sender.py, turn_handler.py
+- [x] T2.64 implement sdk/sdk.py SimulationSdk: the single Orchestrator entry point building transport + runtime (rule 3, D5)
+- [x] T2.65 make transport/listener/controls injectable via run_peer kwargs (map §4.3 seam — CI runs in-process fakes)
+- [x] T2.66 implement sdk/series.py run_series: num_games from config, role alternation (odd = natural role), fresh PeerRuntime + re-negotiation per sub-game
+- [x] T2.67 implement RestartSeries loop with MAX_RESTARTS from config, draining inboxes between restarts
+- [x] T2.68 architecture test: CLI/GUI import only through SimulationSdk (grep/import-linter check, rule 3)
+- [x] T2.69 test: role_for alternation — sub-game 2 swaps roles, sub-game 3 restores
+- [x] T2.70 test: a 2-sub-game stub series completes with fresh state per sub-game
+- [x] T2.71 test: RestartSeries drains turns/controls/audits but not agreements between attempts
+- [x] T2.72 ruff + line-budget check sdk/ modules  <!-- done: series.py split -> series.py 147 + series_log.py 47; all sdk/ <=150 -->
+<!-- FULL stage-verify (T2.85/T3.56/T4.89/T6.64/T7.70) left unchecked: line-budget clause now passes, but per-stage CI branches + coverage runs were NOT executed. -->
+- [x] T2.73 implement cli.py: `peer --role {police,thief} [--config DIR] [--no-gui]` + `replay --log PATH` (brief §15 run pattern)
+- [x] T2.74 test: host/port/opponent-URL come exclusively from config; the CLI exposes NO addressing flags (PRD-5 FR-5.3, course config-driven gate)
+- [x] T2.75 test: CLI parsing per subcommand incl. bad-role rejection with a clear message
+- [x] T2.76 smoke test [network marker]: `uv run python -m pursuit peer --role police` starts and binds the configured port
+- [x] T2.77 ruff + line-budget check cli.py
+- [x] T2.78 implement tests/fakes/fake_transport.py: in-process transport implementing the full seam contract (no network in CI)
+- [x] T2.79 write a shared transport contract-test suite run against BOTH FakeTransport and McpTransport
+- [x] T2.80 configure CI to exclude [network]-marked tests; fakes-only by default (course gate)
+- [x] T2.81 implement the listener event stream (negotiated/incoming/moved/game_over/…) consumed by tests and later the GUI (map §4.3)
+- [x] T2.82 test: listener receives the full ordered event sequence for a fixture game
+- [x] T2.83 fill docs/prd/PRD-2-fastmcp-p2p.md acceptance criteria
+- [x] T2.84 document the 4-tool wire contract + retry/dedup semantics in docs/INTEROP.md (from map §3)
+- [ ] T2.85 stage-2 verify: ruff, line budget, pytest ≥85%, CI green  <!-- partial: line budget fails on sdk/series.py (155) -->
+- [ ] T2.86 merge `feat/stage2-mcp-infra` after CI green
+
+## Stage 3 — Blind strategy (PRD-3, brief §14.3: decision core on full information)
+
+- [ ] T3.1 create feature branch `feat/stage3-blind-strategy`
+- [x] T3.2 implement domain/brains.py BrainBase keeping the reference `__init__(self, llm=None, rng=None, trash=None)` signature (map §4.1 contract)  <!-- note: BrainBase in strategy/base.py -->
+- [x] T3.3 implement the Decision dataclass (move_type, direction, hint, verdict, fallback, random_move, response_seconds, prompt_text, reasoning)
+- [x] T3.4 implement the _decide_move → _pick_move override seam exactly per the reference contract (brief §9)
+- [x] T3.5 implement runtime force-degrade: illegal brain decision → HOLD, logged with fallback flag (never stall the loop)
+- [x] T3.6 test: Decision defaults; verdict constrained to {truth, lie}
+- [x] T3.7 test: a brain returning a diagonal is degraded to HOLD and flagged fallback
+- [x] T3.8 test: a class not subclassing BrainBase is rejected by the loader with TypeError
+- [x] T3.9 ruff + line-budget check domain/brains.py
+- [x] T3.10 implement strategy/__init__.py load_brain_cls("module:Class") importlib loader
+- [x] T3.11 implement resolve_brain honoring [strategy] police_class/thief_class with built-in heuristic default (brief §9)
+- [x] T3.12 test: load_brain_cls loads a fixture brain; a bad path raises ConfigError quoting the offending string
+- [x] T3.13 test: empty [strategy] section → built-in brain runs
+- [x] T3.14 ruff + line-budget check strategy/__init__.py
+- [x] T3.15 implement BlindPoliceBrain v0: minimize Manhattan distance to the true thief cell (full-info mode)
+- [x] T3.16 implement BlindThiefBrain v0: maximize distance from the true cop cell, tiebreak toward unvisited cells
+- [x] T3.17 test: police v0 strictly closes distance every turn on an open board
+- [x] T3.18 test: thief v0 never steps onto the cop's cell
+- [x] T3.19 property test: both v0 brains emit only legal moves across 500 random positions
+- [x] T3.20 implement strategy/pathing.py: BFS true-distance over the barrier graph (≤150 lines)  <!-- note: BFS true-distance in domain/board.py (bfs_distance) -->
+- [x] T3.21 implement interception targeting: minimize BFS distance to the predicted thief cell, not straight-line Manhattan (D6)
+- [x] T3.22 implement flight prediction v0: assume the thief flees along the max-distance gradient
+- [x] T3.23 test: BFS distance lengthens around a wall fixture (barrier-aware)
+- [x] T3.24 test: unreachable cell returns the infinity sentinel; the brain never chases unreachable targets
+- [x] T3.25 lab test: interception beats naive Manhattan chase in a walled-corridor fixture
+- [x] T3.26 ruff + line-budget check strategy/pathing.py
+- [x] T3.27 implement the barrier funnel heuristic: place the barrier maximizing reduction of the thief reachable-cell count (D6, replaces the reference 15% coin flip)
+- [x] T3.28 implement quadrant-sealing policy: barrier sequences that cage the thief region (D6)
+- [x] T3.29 implement own-cell barrier usage in cage completion (the 5th placement option, D4)
+- [x] T3.30 implement the self-jail guard: never place a barrier that walls the cop into a dead region
+- [x] T3.31 test: cage-completion move places the barrier on a thief-adjacent cell, not randomly
+- [x] T3.32 test: the self-jail guard rejects the walling placement on a fixture
+- [x] T3.33 test: quota exhaustion degrades the policy to pure chase without errors
+- [x] T3.34 implement the k-step reachable-cell mobility evaluator for the thief (D6 anti-jail metric)
+- [x] T3.35 implement mobility-maximizing thief move choice with a config-driven minimum-mobility threshold
+- [x] T3.36 implement edge discipline: penalize edge/corner cells while the cop is near (barrier-trap awareness, D6)
+- [x] T3.37 test: thief refuses the last open cell of a 3-wall pocket (would-be jail)
+- [x] T3.38 test: mobility metric counts barriers + edges correctly on hand-built fixtures
+- [x] T3.39 test: edge-discipline penalty activates only within the configured cop-proximity radius
+- [x] T3.40 implement lab/selfplay.py: N in-process games over FakeTransport with seeded RNG (D7 — the evidence machine)  <!-- note: lab harness = lab/arena.py + runner.py -->
+- [x] T3.41 implement lab/stats.py: win-rate table, capture-time histogram, jail-vs-land-vs-barrier capture breakdown
+- [x] T3.42 implement the lab CLI: `uv run python -m lab --games 500 --police X --thief Y --seed S`  <!-- note: via `pursuit lab` CLI (not python -m lab) -->
+- [x] T3.43 record (seed, config hash, git hash) into every lab output JSON for reproducibility (D7)
+- [x] T3.44 test: lab determinism — same seed twice yields identical results minus timestamps
+- [x] T3.45 unit-test lab/stats.py aggregation math on tiny fixture runs
+- [x] T3.46 run the 500-game baseline BlindPolice v0 vs BlindThief v0; commit the results artifact under docs/lab/  <!-- done via sdk/lab_belief BeliefV2 run_lab_versus; honest 0.975-0.98 vs greedy; artifacts/lab/first_blood.json+.md (path is artifacts/lab, not docs/lab) -->
+- [ ] T3.47 run ablation: BFS interception vs naive Manhattan police; commit the table
+- [ ] T3.48 run ablation: mobility thief vs distance-only thief; commit the table
+- [ ] T3.49 run ablation: funnel/sealing barriers vs 15%-random barriers; commit the table
+- [x] T3.50 ruff + line-budget check lab/ modules
+- [x] T3.51 wire brains into the runtime with a full-information observation feed behind a blind-strategy config flag
+- [x] T3.52 integration test (fakes): a full game with v0 brains reaches a terminal result with a valid step log
+- [x] T3.53 test: [strategy] config pointing at the lab-best brains loads via resolve_brain
+- [x] T3.54 fill docs/prd/PRD-3-blind-strategy.md acceptance criteria + lab-evidence links
+- [x] T3.55 update docs/STRATEGY.md: interception, cages, mobility rationale with lab numbers (every claim artifact-backed, D7)
+- [ ] T3.56 stage-3 verify: ruff, line budget, pytest ≥85%  <!-- partial: line budget fails on sdk/series.py (155) -->
+- [ ] T3.57 merge `feat/stage3-blind-strategy` after CI green
+
+## Stage 4 — Language + Scent (PRD-4, brief §14.4: pheromones, belief, hints, deception)
+
+- [ ] T4.1 create feature branch `feat/stage4-scent-language`
+- [x] T4.2 implement domain/smell.py SmellField with a dialect switch driven by the signed shared config (D3)
+- [x] T4.3 implement the reference dialect: subtractive decay max(0, v − 0.10) + max-merge deposit (map §2.2)
+- [x] T4.4 implement the book dialect: τ(t+1) = max(0, (1−ρ)·τ + Δτ) multiplicative decay + additive deposit (brief §5, D3/D4)
+- [x] T4.5 implement 5×5 radial emission: center 0.9, Chebyshev-ring falloff intensity/(half+1) → 0.9/0.6/0.3, 3-dp rounding (map landmine 4)
+- [x] T4.6 add config key pheromones.dialect with validation (reference|book, unknown → ConfigError)
+- [x] T4.7 implement min_center_intensity floor (default 0.5) as a negotiable, validated config key (repo invention — negotiate it, map §6)
+- [x] T4.8 implement snapshot()/absorb() wire format {"r,c": float} with zero cells omitted
+- [x] T4.9 implement strongest_cell()
+- [x] T4.10 test: deposit at (3,3) yields 0.9 center / 0.6 ring-1 / 0.3 ring-2 across the 5×5 field
+- [x] T4.11 test: emission clips correctly at board edges (deposit at (0,0))
+- [x] T4.12 test: reference decay steps 0.9 → 0.8 → 0.7
+- [x] T4.13 test: book decay steps 0.9 → 0.81 → 0.729 (multiplicative)
+- [x] T4.14 test: book deposit adds overlapping trails; reference deposit max-merges them
+- [x] T4.15 test: intensity never negative and never exceeds the configured source cap after any op sequence (property)
+- [x] T4.16 test: half-peak readability window ≈6–7 turns under the book law with ρ=0.10 (brief §5 sanity)
+- [x] T4.17 test: snapshot/absorb round-trip is byte-stable (3-dp rounding preserved)
+- [x] T4.18 test: deposit below min_center_intensity raises (anti-decoy)
+- [x] T4.19 golden test: the rule-23 numeric worked-example fixture reproduces exactly under each dialect
+- [ ] T4.20 write tools/scent_lock.py emitting formula text + worked example + SHA-256 lock file for the pre-series exchange (rule 23, D3)
+- [ ] T4.21 test: scent_lock hash is stable across runs and platforms (canonical serialization)
+- [x] T4.22 ruff + line-budget check domain/smell.py (split dialects into smell_laws.py if near 150)
+- [x] T4.23 implement domain/belief.py BeliefGrid: uniform prior, barrier masking, exclude(cell), most_likely(), as_matrix()
+- [x] T4.24 implement emission-profile inversion: P(scent reading | opponent at s) from the known 5×5 profile + decay age (D6 — not the reference multiplicative bump)
+- [x] T4.25 implement zero-scent-as-evidence: down-weight cells whose expected fresh trail contradicts a measured 0.00 (brief §5 lie-detection math)
+- [x] T4.26 implement adversarial motion-model diffusion: thief-flee kernel for the cop belief, cop-chase kernel for the thief belief (D6)
+- [x] T4.27 implement the orthogonal-only diffusion kernel (von Neumann + stay); no king default (map gap 4)
+- [x] T4.28 implement normalization guarding against all-zero collapse (renormalize to uniform-over-unmasked)
+- [x] T4.29 test: prior is uniform and excludes barrier cells
+- [x] T4.30 test: fresh 0.9 scent at (2,3) → argmax belief at (2,3)
+- [x] T4.31 test: scent aged 2 decays shifts likelihood toward 2-step-older positions
+- [x] T4.32 test: the brief §5 worked example — hint "north", τ_north=0.00, scent mass south-east → hint weight drops, belief steers south-east
+- [x] T4.33 test: diffusion never leaks probability into barrier cells
+- [x] T4.34 test: the adversarial kernel moves mass away from the cop faster than a uniform kernel (fixture comparison)
+- [x] T4.35 test: exclude(cell) then renormalize sums to 1
+- [x] T4.36 test: the all-mass-excluded degenerate case renormalizes without NaN
+- [x] T4.37 ruff + line-budget check domain/belief.py (split inversion into belief_likelihood.py if needed)
+- [x] T4.38 implement strategy/hint_model.py: parse an opponent hint into a directional/landmark likelihood over cells with a deterministic rule-based fallback
+- [x] T4.39 implement the reliability coefficient r ∈ [0,1]: per-opponent trust updated from scent-contradiction events (book p.63 named coefficient, D6)
+- [x] T4.40 implement Bayes fusion: posterior ∝ scent_likelihood × hint_likelihood^r (hint discounted by reliability)
+- [ ] T4.41 persist the reliability trajectory into the step log (feeds the README lie-detection plot)
+- [x] T4.42 test: consistent truthful hints raise r toward 1 over 10 steps
+- [x] T4.43 test: one flagrant lie (hint north, scent south, τ_north=0) drops r below the configured distrust threshold
+- [x] T4.44 test: r=0 reduces the posterior to scent-only (hint fully ignored)
+- [x] T4.45 test: fusion never zeroes a cell on a hint alone (hints may lie — no hard exclusion)
+- [x] T4.46 test: the "(silence)" placeholder yields a neutral hint likelihood
+- [x] T4.47 ruff + line-budget check strategy/hint_model.py
+- [x] T4.48 implement strategy/trash_talk.py TrashTalk template provider: landmark lines per arena (New York/London/Paris/"" generic), thief lie-rate from config
+- [x] T4.49 enforce the hint word cap (15, from config) on every provider output path (rule: told to the LLM AND enforced in code)
+- [x] T4.50 implement LlmTrashTalk: every_n_steps throttle, deadline, JSON contract {"message","verdict","reasoning"}, template fallback on ANY failure (D8)  <!-- done: strategy/ollama_talk.py OllamaTalk (deadline + JSON banter contract + template fallback on any failure) -->
+- [x] T4.51 implement strategy/talk_providers.py resolve_trash_talk for the 4 modes (template/ollama/claude_api/claude_cli); unknown provider → ConfigError, documented deviation from the reference silent fallback  <!-- done: strategy/resolve.py resolve_trash_talk selects on trash_talk.provider (template/ollama live; claude_* stubbed) -->
+<!-- T4.53/54 (claude_api|cli stubs, token accounting) still unchecked; T4.59/60 (sealed-fallback-flag) covered by fallback tests but the SEALED flag path is not asserted -> left unchecked. -->
+- [x] T4.52 implement infra/ollama_provider.py: stdlib POST to the configured ollama_url with format:"json", model qwen2.5:7b from config, aya-expanse:8b fallback (D8)  <!-- done: infra/ollama.py OllamaClient (stdlib POST, format=json, model + url from config) -->
+<!-- T4.53 claude stubs + T4.54 token accounting still pending. -->
+- [ ] T4.53 stub claude_api/claude_cli providers present-but-off (course zero-API-key rule, D8)
+- [ ] T4.54 implement provider token accounting (tokens_step/tokens_total) surfaced into sealed records
+- [x] T4.55 seal the full LLM prompt + reasoning + bluff classification into the audited record (prompt_discussion block, map §2.3)
+- [x] T4.56 test: template provider emits ≤15 words with a New York landmark when arena="New York"
+- [x] T4.57 test: arena "" produces generic landmark lines
+- [x] T4.58 test: lie-verdict frequency matches the configured rate (seeded statistical test)
+- [ ] T4.59 test: LLM deadline miss → template fallback, loop not stalled, fallback flag sealed
+- [ ] T4.60 test: malformed LLM JSON → template fallback + sealed fallback flag
+- [ ] T4.61 test: every_n_steps=3 invokes the LLM on steps 3,6,9 only (FakeLlm call counter)
+- [x] T4.62 test: all trash-talk tests run on injected FakeLlm — no network/model in CI (course gate)
+- [x] T4.63 implement the numeric-coordinate leak guard: outgoing hints containing bare coordinate pairs are rewritten/rejected (rule 27)
+- [x] T4.64 test: hint "I am at 3,4" blocked by the leak guard; landmark phrasing passes
+- [x] T4.65 ruff + line-budget check trash_talk.py, talk_providers.py, ollama_provider.py  <!-- done: talk.py, resolve.py (123), ollama_talk.py (136), infra/ollama.py (72) all <=150 -->
+- [x] T4.66 implement the incoming-hint classifier: claim type (direction/landmark/taunt/silence) + extracted direction, Ollama-backed with deterministic fallback (D8)  <!-- done: OllamaTalk.interpret (classify claim + direction, SAFE deterministic fallback on garbage/injection/empty) -->
+- [ ] T4.67 implement the config-driven landmark table (world.landmark_map) mapping arena landmarks to board regions
+- [ ] T4.68 test: "I'm near the harbor" maps to the configured harbor region cells
+- [x] T4.69 test: classifier fallback path is deterministic and CI-safe (FakeLlm)  <!-- done: test_ollama.py test_interpret_returns_safe_default_on_garbage / _short_circuits_on_empty_hint (FakeClient) -->
+- [x] T4.70 test: prompt-injection in an opponent hint ("ignore previous instructions…") cannot alter classifier behavior or config  <!-- done: test_ollama.py test_interpret_ignores_prompt_injection_payload -->
+- [ ] T4.71 ruff + line-budget check the hint-interpreter module
+- [x] T4.72 rewire PoliceBrain v1 to belief-driven play: BFS-intercept the argmax-belief cell + belief-mass herding with barriers (D6)
+- [x] T4.73 rewire ThiefBrain v1: flee the believed cop cell + scent-aware routing minimizing information leaked to the cop belief (D6)
+- [ ] T4.74 implement planned deception: lie when the expected belief-error gain is highest (verdict chosen by policy, not RNG) (D6)
+- [ ] T4.75 implement thief scent management: prefer moves whose emission overlaps stale own trail (confuses the inversion)
+- [x] T4.76 update turn_handler to the full stage-4 order: belief.diffuse → observe_smell → smell.absorb → decay_all (reference parity, map §2.2)
+- [x] T4.77 update turn_sender: deposit own scent + decay own trail after each own move (message-driven decay)
+- [x] T4.78 architecture test: partial-info observation API exposes no true opponent position field (brains cannot cheat)
+- [x] T4.79 test: own outgoing smell_grid never contains opponent-derived cells (info separation)
+- [ ] T4.80 lab run: police v1 vs police v0 under partial info, 300 games; commit the table
+- [ ] T4.81 lab run: thief v1 survival vs police v1 exceeds the thief v0 baseline; commit the table
+- [ ] T4.82 lab ablation: deception on vs off — measure cop belief error delta; commit
+- [ ] T4.83 lab sweep: belief.smell_trust_weight tuning table (sanctioned private knob, map §4.3); commit
+- [ ] T4.84 lab sweep: reliability-coefficient learning rate; commit
+- [ ] T4.85 lab run: 500-game v1 vs reference-default brains matchup; commit the win-rate table for the README
+- [x] T4.86 integration test (fakes): full partial-info game with scent + hints + brains v1 reaches a terminal state with a valid log
+- [x] T4.87 fill docs/prd/PRD-4-language-scent-belief.md acceptance criteria
+- [x] T4.88 update docs/STRATEGY.md with the belief-v2 math + hint-fusion design + lab evidence
+- [ ] T4.89 stage-4 verify: ruff, line budget, pytest ≥85% incl. all new modules  <!-- partial: line budget fails on sdk/series.py (155) -->
+- [ ] T4.90 merge `feat/stage4-scent-language` after CI green
+
+## Stage 5 — Cloud + Tunnel (PRD-5, brief §14.5: ngrok, remote machines)
+
+- [ ] T5.1 create feature branch `feat/stage5-tunnel`
+- [ ] T5.2 implement infra/tunnel.py: launcher/attach for the D5 provider decision (fresh ngrok account + one reserved domain per role, or free named Cloudflare tunnel with `/cop/mcp`+`/thief/mcp` path routes — old paid ngrok account deleted), all from config (D5, rule 10)
+- [ ] T5.3 add config keys network.public_url + tunnel.enabled + tunnel.domain with validation
+- [ ] T5.4 implement tunnel preflight: resolve the public URL and probe reachability before negotiating (D5)
+- [ ] T5.5 keep the preflight off the 4-tool MCP contract (plain HTTP reachability probe — no fifth tool)
+- [ ] T5.6 test (fake HTTP): preflight fails fast with an actionable message when the tunnel is down
+- [ ] T5.7 test: tunnel.enabled without a reserved domain → ConfigError
+- [ ] T5.8 test: ngrok authtoken read from env only; never from a committed file
+- [ ] T5.9 ruff + line-budget check infra/tunnel.py
+- [ ] T5.10 document ngrok setup (authtoken via env, reserved-domain mapping) in docs/TUNNEL.md + .env-example keys
+- [ ] T5.11 assign the 3 reserved domains: cop, thief, spare; record them in the config templates + declaration mcp_servers block
+- [ ] T5.12 manual test: police ↔ thief over both ngrok public URLs on one machine, two processes; archive logs
+- [ ] T5.13 manual test: cross-machine game vs Yarden over both tunnels; archive logs
+- [ ] T5.14 measure tunnel round-trip latency; record numbers for RESEARCH-REPORT
+- [ ] T5.15 tune retry/poll/connect timeouts for public-internet latency; land tuned values in config, not code
+- [ ] T5.16 chaos test: kill the tunnel mid-game → watchdog + timeout path yields 0/0 technical loss with logs extracted (D4/D5)
+- [ ] T5.17 chaos test: kill the opponent process mid-game → same clean ending, audit still attempted
+- [ ] T5.18 chaos test: duplicate deliveries under tunnel retries → dedup holds, no turn-ownership desync
+- [ ] T5.19 test (fake responses): transport backs off on 429/5xx from the tunnel edge
+- [ ] T5.20 spot-audit remote play: UI + console + logs never reveal the opponent true position live (rules 8–9)
+- [ ] T5.21 add remote-profile run scripts (peer + tunnel env) for both roles
+- [ ] T5.22 fill docs/prd/PRD-5-cloud-tunnel.md acceptance criteria + latency evidence
+- [ ] T5.23 stage-5 verify: ruff, line budget, coverage (tunnel code covered via fakes in CI)
+- [ ] T5.24 merge `feat/stage5-tunnel` after CI green
+
+## Stage 6 — Security + Crypto (PRD-6, brief §14.6: commit-reveal, nonce, step-0, audit)
+
+- [ ] T6.1 create feature branch `feat/stage6-crypto`
+- [x] T6.2 implement domain/crypto.py canonical_json (sort_keys=True, ensure_ascii=False, separators (",",":"))
+- [x] T6.3 implement CommitReveal.commit_of reference dialect: sha256(canonical_json(payload) + "|" + nonce) (stock-reference compat, D3)
+- [x] T6.4 implement the book dialect: sha256(canonical_json({...payload, nonce})) selected by signed config key crypto.dialect (D3 default per NotebookLM A1 — see T6.75)
+- [x] T6.5 implement seal(payload) → {nonce, commit} with secrets.token_hex(NONCE_BYTES) (never random)
+- [x] T6.6 implement verify() using secrets.compare_digest (fixes the reference plain != )
+- [x] T6.7 implement audit_records(records) → {passed, verified_steps, failed_steps[]}
+- [x] T6.8 test: reference-dialect vector reproduces a recorded reference hash byte-for-byte
+- [x] T6.9 test: book-dialect vector reproduces the brief §7 snippet output byte-for-byte
+- [x] T6.10 test: Hebrew hint hashes as raw UTF-8 via ensure_ascii=False (map §3.5)
+- [x] T6.11 test: sealing the same payload twice yields different nonces and different commits
+- [x] T6.12 test: a single-bit payload tamper fails verify
+- [x] T6.13 test: the nonce-reuse detector flags duplicate nonces within an audit record set
+- [x] T6.14 test: crypto.dialect unknown value → ConfigError
+- [x] T6.15 property test: verify(seal(p)) holds over random payloads incl. unicode and nesting
+- [x] T6.16 ruff + line-budget check domain/crypto.py
+- [x] T6.17 implement domain/negotiation.py Negotiation.signed() → {terms, nonce, signature, identity}  <!-- note: functions in domain/negotiation.py + peer/agreement.py -->
+- [x] T6.18 implement verify_peer: exact terms dict equality (types included) then signature re-verification (map §3.1)
+- [x] T6.19 implement terms_from_config + REQUIRED_TERMS fail-fast with no code defaults (map §2.3)
+- [ ] T6.20 include the scent-formula lock hash + crypto.dialect + counting-mode flag in the signed terms (rule 23, D3)  <!-- partial: dialects on wire only behind flag; counting-mode not in signed terms -->
+- [x] T6.21 test: int-vs-float type mismatch in terms → CryptoError refusal to play
+- [x] T6.22 test: identity differences do NOT block negotiation (identity unsigned by design)
+- [x] T6.23 test: a missing REQUIRED_TERM fails naming the key
+- [x] T6.24 interop test: our negotiation verifies a recorded reference-agreement fixture
+- [x] T6.25 ruff + line-budget check domain/negotiation.py
+- [x] T6.26 implement peer/sealing.py sealed_step_record with every reference payload key incl. the intent/verdict DUPLICATION (hash-compat, map §2.3)
+- [ ] T6.27 implement the state-string serialization "grid=NxN;self=[r, c];barriers=[[r,c],…]" sorted, byte-identical to the reference
+- [x] T6.28 implement sealed_spec_record (step-0): collect_spec + model + code_version + group_name + sub_game_number + github_commit (fixes map gap 14, rules 24/53)
+- [x] T6.29 implement shared/sysinfo.py collect_spec: OS/CPU cores+freq/RAM/GPU/VRAM (CIM + nvidia-smi), cached per process
+- [x] T6.30 implement the git-hash provider: `git rev-parse HEAD` at startup, injected into step-0 AND the result artifact
+- [ ] T6.31 test: sealed_step_record preserves intent==verdict duplication (removing either breaks hashes)
+- [ ] T6.32 test: the state string for a fixture board matches the reference byte-for-byte
+- [x] T6.33 test: step-0 is records[0] of the same commit chain and verifies with the rest
+- [x] T6.34 test: github_commit present and 40-hex in step-0 (fake git in CI)
+- [x] T6.35 test: collect_spec returns all six hardware fields and degrades gracefully without a GPU
+- [x] T6.36 ruff + line-budget check peer/sealing.py + sysinfo.py (extensions in a new module if sealing nears 150)
+- [ ] T6.37 document the staging decision: reference 2-stage commit-reveal default; optional per-step Ack behind negotiated flag protocol.ack_mode (book 4-stage, map gap 11)
+- [ ] T6.38 implement the optional Ack path: opponent lock-in confirmation before reveal when ack_mode=true
+- [ ] T6.39 test: ack_mode on — reveal blocked until the Ack arrives
+- [ ] T6.40 snapshot test: ack_mode off — wire bytes identical to the reference dialect (regression guard)
+- [x] T6.41 leak test: no nonce appears in any pre-audit outbound message (rule 18 — nonce secret until final audit)
+- [x] T6.42 implement peer/summary.py finish(): exchange AuditPayloads and run audit_records on the opponent records  <!-- note: in peer/audit.py exchange_audits() -->
+- [x] T6.43 implement forgery adjudication: any hash mismatch → sub-game `technical_loss` 0/0 regardless of board result (rule 19; A9a — supersedes the reference's tamper_forfeit-winner; see T6.73)
+- [x] T6.44 run the audit ALSO on timeout/stopped endings, best-effort (fixes the reference skip; D4)
+- [x] T6.45 implement the truthful capture-claim response path: answer computed by rules.is_captured from local state, never by the brain (rule 21)
+- [x] T6.46 test: a forged record in the opponent audit → tamper_forfeit, cheater 0
+- [x] T6.47 test: a clean full-game fixture log passes the mutual audit on both sides
+- [x] T6.48 test: timeout ending still exchanges audits and records 0/0
+- [x] T6.49 test: no API path lets the thief answer a capture claim falsely
+- [x] T6.50 integration test (fakes): full game with commit-reveal on; audits pass both sides
+- [x] T6.51 integration test: a deliberately tampering peer double is caught and the result rewritten
+- [x] T6.52 ruff + line-budget check peer/summary.py
+- [x] T6.53 implement replay/verify.py: re-verify every commit in a saved log honoring the log's recorded crypto dialect  <!-- done: interface/replay_verify.py verify_log accepts a record under whichever dialect (reference|book) reproduces its commit; interface/replay_view.py + CLI replay wired to it -->
+- [ ] T6.54 implement normalize_log for both log dialects WITHOUT defaulting a missing audit to passed (fixes map leniency)
+- [ ] T6.55 test: a verified log yields an all-steps-verified summary
+- [ ] T6.56 test: one corrupted commit → named failed step + overall FAIL
+- [ ] T6.57 test: missing audit block → verdict "unverified", never silently OK
+- [x] T6.58 ruff + line-budget check replay/verify.py  <!-- done: interface/replay_verify.py (133 lines) <=150 -->
+- [ ] T6.59 implement the pre-series scent-lock ceremony: exchange formula text + worked example + sha256, verify equality before step 1 (rule 23)
+- [ ] T6.60 test: a mismatched scent-lock hash aborts the series before the first move
+- [ ] T6.61 lab rehearsal: run the lock ceremony against fixture opponents on both dialects
+- [x] T6.62 fill docs/prd/PRD-6-security-crypto.md acceptance criteria
+- [x] T6.63 map each of the 10 interop landmines (map §10) to its config key + default in docs/INTEROP.md
+- [ ] T6.64 stage-6 verify: ruff, line budget, pytest ≥85%  <!-- partial: line budget fails on sdk/series.py (155) -->
+- [ ] T6.65 merge `feat/stage6-crypto` after CI green
+
+### Stage 6 addendum — rulings 2026-07-13 (NotebookLM A1/A5/A6/A7/A9; DECISIONS D14, PRD-6 FR-6.10–6.12)
+
+- [x] T6.66 add `cryptography` runtime dependency via `uv add` (Ed25519 primitives, D14)
+- [x] T6.67 implement domain/ed25519.py: keygen (private key persisted OUTSIDE the repo, .gitignored path from config), sign, verify, "ed25519:base64" pubkey + signed-blob encoding (A7)  <!-- note: implemented in domain/crypto/signing.py -->
+- [x] T6.68 test: Ed25519 sign→verify round-trip; tampered blob and wrong pubkey both fail verification
+- [x] T6.69 implement declaration + step-0 signing with the team Ed25519 key: `"ed25519:base64-signed-blob"` field per the declaration schema, additive so a stock reference peer still parses (A7, FR-6.10)
+- [x] T6.70 implement partner-pubkey exchange in negotiation + lock both pubkeys into the signed pre-game declaration; verify the partner's declaration signature before play (A7)
+- [x] T6.71 test: negotiation refuses to start when the partner's declaration signature fails to verify against the declared pubkey (A7)
+- [x] T6.72 add the counted-games-so-far field to the declaration builder INSIDE the signed JSON (rule 37, A9b) + receipt-side validation that it is present and a non-negative integer
+- [x] T6.73 implement the technical_loss result path: timeout/crash/forgery endings emit result string "technical_loss" with scores 0/0, audit still run best-effort + result JSON still emailed (A6, A9a, FR-6.12)  <!-- note: technical_loss path done; result-email emission not yet wired -->
+- [ ] T6.74 test: audit-caught forgery ⇒ sub-game result "technical_loss" 0/0 in the result JSON and the report is still emitted (A9a)
+- [x] T6.75 flip the crypto.dialect default to `book` (nonce inside canonical JSON, A1/D3): default-config seal reproduces the dialect-B golden vector; `reference` selectable only by explicit negotiated config (FR-6.11)
+- [x] T6.76 test: survival-counter semantics per A5 — thief STAY/HOLD increment the thief's own 35-counter, cop barrier turns do NOT, adjudication on the thief's OWN counter
+
+## Stage 7 — Reporting + Visualization (PRD-7, brief §14.7: Gmail, Gatekeeper, artifacts, GUI, replay)
+
+- [ ] T7.1 create feature branch `feat/stage7-reporting`
+- [ ] T7.2 implement shared/quota_manager.py: daily send cap with a persisted counter (gate 1, D5)
+- [x] T7.3 implement shared/token_bucket.py: tokens ← min(C, tokens + r·Δt), allow ⟺ tokens ≥ 1 (gate 2, brief §12)  <!-- done: token-bucket gate inside infra/gatekeeper.py (_consume_token) rather than a standalone module -->
+- [x] T7.4 implement shared/dos_detector.py: abnormal-send-pattern circuit breaker locking the API path (gate 3)  <!-- done: gate 3 = consecutive-failure circuit breaker (_check_breaker) in infra/gatekeeper.py; not a separate shared/dos_detector.py module -->
+- [x] T7.5 compose the 3 gates fail-fast in shared/gatekeeper.py in front of Gmail AND the LLM (D5)  <!-- done: infra/gatekeeper.py Gatekeeper.execute runs quota -> token bucket -> circuit breaker fail-fast; wired in front of email send -->
+- [ ] T7.6 implement HTTP 429 handling: back off to the next window, never blind-retry (brief §12)
+- [ ] T7.7 implement retry_after sleep + concurrent_max enforcement (fixes map gap 19)
+- [ ] T7.8 wire every gate parameter from rate_limits.json (30 rpm / 2 conc / 5s / 3 retries / depth 100 minimums)
+- [ ] T7.9 test: bucket refill math at r=0.5 tokens/s over a simulated clock
+- [ ] T7.10 test: a 100-send burst caps the queue at the configured depth; overflow rejected
+- [ ] T7.11 test: exhausted daily quota blocks at gate 1 before the bucket is consulted
+- [ ] T7.12 test: 20 sends in 1s trips the DOS breaker; the path stays locked until the configured reset
+- [ ] T7.13 test: a 429 response suppresses retries within the backoff window (fake clock)
+- [ ] T7.14 test: gate config below Appendix-F minimums (rpm<30) rejected at load
+- [x] T7.15 ruff + line-budget check the three gate modules + gatekeeper.py  <!-- done: infra/gatekeeper.py (142 lines, all gates) <=150 -->
+- [x] T7.16 port the HW6 Gmail OAuth sender into infra/email_sender.py (D9 — rewrite of the reference draft-only stub)  <!-- note: infra/email.py GmailSender (OAuth->SMTP->noop) -->
+- [x] T7.17 restrict OAuth to the gmail.send scope; credentials/token paths from env, .gitignored (rules 30/39/40)
+- [x] T7.18 implement the result JSON as a MIME ATTACHMENT (never body free text) to the configured agent-reports address rmisegal+uoh26finalgame@gmail.com (rule 33)
+- [x] T7.19 route every send through the Gatekeeper (rule 28)  <!-- done: sdk/series.py _maybe_email routes GmailSender.send_result through Gatekeeper.from_config(...,"email").execute; test_maybe_email_sends_through_gatekeeper -->
+- [ ] T7.20 implement send-failure persistence: unsent reports queued to disk for retry (never lose the mandatory report)
+- [ ] T7.21 test (FakeGmail): the email carries an attachment part named result_<game_id>.json
+- [ ] T7.22 test: the sender API cannot produce a body-only free-text report (guard, rule 33)
+- [ ] T7.23 test: sender refuses to start if the credentials path resolves inside the repo tree
+- [ ] T7.24 manual test: one real send to self + one to the plus-address; archive the screenshot
+- [x] T7.25 ruff + line-budget check infra/email_sender.py
+- [x] T7.26 implement report/artifact_schemas.py embedding the _schema prose + schema_version 1.1 verbatim (D1/D9)  <!-- done: report/schema.py (SCHEMA_* + schema_version 1.1) -->
+- [x] T7.27 implement report/artifacts.py builders for declaration/config/log/result with the links block + shared game_uid  <!-- done: build_declaration/build_config_artifact/build_log_artifact/result builder -->
+- [ ] T7.28 implement BOTH hashers exactly: canonical_sha256 (compact separators) for config_sha256; consensus_signature (spaced separators) for group blocks + mutual agreement (map §2.6 — never mix)
+- [ ] T7.29 implement the symmetric-subset mutual result signature {game_id, aggregate, sub_games[…]} excluding per-peer tokens/timestamps (map trick — byte-identical from both peers)
+- [x] T7.30 implement report/emit.py writing all four artifacts into logs/<own_group_id>/ with per-game filenames  <!-- done: report/artifacts.py write path + *_filename helpers; test_write_artifacts_filenames -->
+- [ ] T7.31 wire the real github_commit per sub-game into result rows (fixes the reference "unknown")
+- [ ] T7.32 wire real opponent token totals from audit records into result rows (fixes the hard-coded 0)
+- [ ] T7.33 include all 4 repo links (both groups, cop+thief) in the result JSON (rule 49)
+- [ ] T7.34 emit config_<game_id>_g<NN>.json from the locked terms per sub-game and commit it to the repo (brief §10 config rules)
+- [ ] T7.35 golden test: each artifact matches a reference-schema fixture field-for-field
+- [ ] T7.36 test: two peers' independently-emitted result files agree byte-identically on the mutual signature
+- [ ] T7.37 regression test: using the wrong hasher on any field fails the golden comparison
+- [ ] T7.38 test: declaration hardware_spec has all 6 fields and its consensus signature verifies
+- [x] T7.39 test: artifact filenames never collide across game_ids and sub-game numbers  <!-- done: test_write_artifacts_filenames asserts per-game reference filenames (game_id + sub-game) -->
+- [ ] T7.40 test: the log artifact contains post-reveal nonces + the mutual_agreement sha
+- [x] T7.41 test: result token totals equal the sum of sealed tokens_step on both sides (fixture)  <!-- done: test_result_totals_match asserts tokens_total_series summed per group -->
+- [ ] T7.42 ruff + line-budget check report/ modules
+- [x] T7.43 implement gui/window.py Tkinter live window: own position, own barriers, belief heatmap — LOCAL TRUTH ONLY (rules 8–9)  <!-- done: interface/window.py PeerWindow + board_view render(position, barriers, belief_matrix); wired via PeerRuntime observer + interface/live_view.py + CLI `peer --gui` -->
+- [x] T7.44 implement heatmap normalization white→red against the current peak (reference parity)  <!-- done: board_view._heat_color(probability, peak) with peak = max cell -->
+- [x] T7.45 enforce structurally: live event payloads carry no opponent-position field (map §2.6 pattern)  <!-- done: live_view.board_snapshot builds the view from the runtime's OWN state + own belief only; no opponent-position field -->
+- [ ] T7.46 implement controls: pause/play/stop/restart + speed slider (slider = enforced LLM deadline + animation pacer)
+- [ ] T7.47 implement the status banner driven by the guarded FSM states
+- [ ] T7.48 architecture test: the live render signature cannot accept an opponent position
+- [ ] T7.49 test: heatmap color math at p=0, peak, and half-peak
+- [x] T7.50 test: GUI event dispatch via a headless fake listener (no Tk in CI)  <!-- done: test_wiring.py exercises live_view.board_snapshot (the event builder) headless; test_interface_imports.py imports the GUI/live_game modules without Tk -->
+- [ ] T7.51 manual test: run a live game and capture the belief-heatmap screenshot (mandatory, brief §13)
+- [ ] T7.52 ruff + line-budget check gui/ live modules
+- [ ] T7.53 implement gui/replay.py ReplayApp over replay/verify.py: step through the log, belief rebuilt from RECORDED smell grids
+- [x] T7.54 add a prominent "Verified OK" banner (mandatory screenshot; fixes the reference small-label gap)  <!-- done: window.show_verified_ok draws a big green VERIFIED OK overlay; the screenshot capture (T7.59) is still manual -->
+- [ ] T7.55 implement sibling-log auto-discovery to overlay the opponent true track post-game
+- [ ] T7.56 implement the failure UI: red "TAMPERED" banner listing failed steps
+- [x] T7.57 test: replaying a clean fixture log reaches the Verified OK state  <!-- done: test_replay.py test_verify_log_passes_for_reference_sealed_records / test_verify_log_detects_book_dialect -->
+- [x] T7.58 test: replaying a tampered fixture shows TAMPERED with step numbers  <!-- done: test_replay.py test_tampered_payload_field_fails_that_step -->
+- [ ] T7.59 manual test: capture the Replay "Verified OK" screenshot (mandatory)
+- [ ] T7.60 ruff + line-budget check gui/replay.py (data layer split into replay_data.py)
+- [ ] T7.61 port the HW6 web replay UI to render finished games from log_*.json — post-game only, no live data path (D10 creativity extension)
+- [ ] T7.62 add scent + belief overlay toggles and a reliability-coefficient timeline chart to the web replay
+- [ ] T7.63 document the info-leak analysis (post-game only → rules 8–9 safe) in docs/UI.md
+- [ ] T7.64 smoke test: the web replay renders a fixture log (static check in CI)
+- [ ] T7.65 write docs/RESEARCH-REPORT-Performance-Analysis.md: LLM-call volume per series vs provider rate limits + how the template fallback guarantees every sub-game finishes (brief §15)
+- [ ] T7.66 fold tunnel latency + token-consumption measurements into the research report
+- [x] T7.67 fill docs/prd/PRD-7-reporting-ui.md acceptance criteria
+- [ ] T7.68 dress rehearsal (fakes + localhost): full 6-sub-game series → 4 artifacts + FakeGmail send + replay verified
+- [ ] T7.69 dress rehearsal over ngrok with a real Gmail send to self; archive all artifacts
+- [ ] T7.70 stage-7 verify: ruff, line budget, pytest ≥85% across the repo  <!-- partial: line budget fails on sdk/series.py (155) -->
+- [ ] T7.71 merge `feat/stage7-reporting` after CI green
+
+## Stage 8 — league operations
+
+- [x] T8.1 finalize docs/LEAGUE-OPS.md: the negotiation checklist covering all 10 interop landmines with our default + fallback per item (D13, map §10)
+- [x] T8.2 enumerate checklist items: crypto dialect, scent dialect + lock, origin/index, starts, arena + hint cap, survival counting mode, timeout semantics, barrier semantics (5 options + both capture rules), ack_mode, LLM-move exception (we DECLINE), token budget, counted-vs-warmup
+- [ ] T8.3 prepare the out-of-band terms worksheet template that both groups type identically into their configs (types included)
+- [ ] T8.4 prepare the scent-lock exchange message template (formula text + worked example + sha256)
+- [ ] T8.5 recruit + schedule the WhatsApp pod: 3 opponents with warm-up and counted slots (D12 W4)
+- [ ] T8.6 create an opponent dossier file per group: contacts, URLs, dialects, quirks observed
+- [ ] T8.7 implement the counted-game tracker enforcing truthful declared counts (false declaration = DQ) and the ≤10 cap
+- [ ] T8.8 implement the league_ops helper: generate per-opponent config_<game_id>_g<NN>.json from the negotiated worksheet
+- [ ] T8.9 test: the worksheet round-trips into byte-identical terms on both sides (fixture)
+- [ ] T8.10 final rehearsal: full self-play series across two machines via ngrok; archive all four artifacts
+- [ ] T8.11 opponent A: run the negotiation checklist; record agreed terms + hashes in the dossier
+- [ ] T8.12 opponent A: exchange the scent lock + config hash before the series (rule 23)
+- [ ] T8.13 opponent A: play warm-up game(s); triage interop failures on a feature branch
+- [ ] T8.14 opponent A: update the github_commit hash in config/declaration before the counted game (rule 53)
+- [ ] T8.15 opponent A: play the counted 6-sub-game series; monitor watchdog + gates live
+- [ ] T8.16 opponent A: run the comprehensive mutual log audit and reconcile results (rule 35)
+- [ ] T8.17 opponent A: both groups send separate result emails; verify identical mutual signatures (rules 34/52)
+- [ ] T8.18 opponent A: archive all 4 artifacts + screenshots under docs/league/opponent-A/
+- [ ] T8.19 opponent B: run the negotiation checklist; record agreed terms + hashes in the dossier
+- [ ] T8.20 opponent B: exchange the scent lock + config hash before the series
+- [ ] T8.21 opponent B: play warm-up game(s); triage interop failures on a feature branch
+- [ ] T8.22 opponent B: update the github_commit hash in config/declaration before the counted game
+- [ ] T8.23 opponent B: play the counted 6-sub-game series; monitor watchdog + gates live
+- [ ] T8.24 opponent B: run the comprehensive mutual log audit and reconcile results
+- [ ] T8.25 opponent B: both groups send separate result emails; verify identical mutual signatures
+- [ ] T8.26 opponent B: archive all 4 artifacts + screenshots under docs/league/opponent-B/
+- [ ] T8.27 opponent C: run the negotiation checklist; record agreed terms + hashes in the dossier
+- [ ] T8.28 opponent C: exchange the scent lock + config hash before the series
+- [ ] T8.29 opponent C: play warm-up game(s); triage interop failures on a feature branch
+- [ ] T8.30 opponent C: update the github_commit hash in config/declaration before the counted game
+- [ ] T8.31 opponent C: play the counted 6-sub-game series; monitor watchdog + gates live
+- [ ] T8.32 opponent C: run the comprehensive mutual log audit and reconcile results
+- [ ] T8.33 opponent C: both groups send separate result emails; verify identical mutual signatures
+- [ ] T8.34 opponent C: archive all 4 artifacts + screenshots under docs/league/opponent-C/
+- [ ] T8.35 verify ≥2 counted games vs different groups completed (hard pass gate, rule 31)
+- [ ] T8.36 verify ≤10 counted games total and a truthful count declared at every game start
+- [ ] T8.37 verify total tokens per series present in every result JSON (rule 54)
+- [ ] T8.38 league retro: record every interop deviation discovered into docs/INTEROP.md
+- [ ] T8.39 enforce the hotfix policy: mid-league fixes on feature branches, hash updated per game, opponent informed
+- [x] T8.40 byte-exact interop conformance kit test: assert our wire/crypto/negotiation encoding matches the reference kit vectors  <!-- done: tests/unit/test_conformance_kit.py (byte-exact assertions vs the reference kit) -->
+
+## Stage 9 — submission
+
+- [ ] T9.1 create repo `nis-yar1-cop` (private, shared with rmisegal@gmail.com) (D2)
+- [ ] T9.2 create repo `nis-yar1-thief` (private, shared with rmisegal@gmail.com) (D2)
+- [ ] T9.3 implement the repo-populate script: export the engine + role-trimmed strategy (cop repo ships only the police brain; thief repo only the thief brain) (D2)
+- [ ] T9.4 test: the populate script excludes the other role's brain, all secrets, and logs
+- [ ] T9.5 verify each deliverable repo standalone: uv sync + ruff + line budget + pytest ≥85% green
+- [ ] T9.6 verify separated config/police/ and config/thief/ dirs in the respective repos (rule 2)
+- [ ] T9.7 set up CI in both deliverable repos; both green
+- [ ] T9.8 write cop README component 1: Dec-POMDP formalism — state space, observations, uncertainty (brief §3/§13)
+- [ ] T9.9 write cop README component 2: FastMCP orchestration dilemmas — turn management, network failures, Gatekeeper/Orchestrator roles
+- [ ] T9.10 write cop README component 3: strategies — belief v2, BFS interception, barrier cages, with lab evidence tables (D7)
+- [ ] T9.11 write cop README component 4: learning-curves section — state the heuristic track explicitly (no RL) or include curves if Q-learning shipped (brief §6)
+- [ ] T9.12 write cop README component 5: embed both mandatory screenshots (belief heatmap + Verified OK)
+- [ ] T9.13 write cop README component 6: cross-link to the thief repo
+- [ ] T9.14 mirror all 6 README components in the thief repo with thief-specific strategy (mobility, deception, scent management)
+- [ ] T9.15 include PRD files + PLAN + TODO in both repos — the development story (rule 50)
+- [ ] T9.16 include docs/STRATEGY.md + RESEARCH-REPORT + INTEROP in both repos
+- [ ] T9.17 include .env-example + config templates; verify .gitignore excludes credentials.json/token.json in both
+- [ ] T9.18 run a secret scan over the FULL git history of both deliverable repos (a leaked secret is permanent)
+- [ ] T9.19 add the reference-repo attribution/EULA note in both READMEs (D1)
+- [ ] T9.20 choose + record the unique 8-character group code (no spaces)
+- [ ] T9.21 write the self-score doc: CODE QUALITY only, every claim artifact-linked, modest calibration (rule 55)
+- [ ] T9.22 verify counted-game result JSONs contain 4 repo links + per-sub-game commit hashes + token totals
+- [ ] T9.23 re-capture both mandatory screenshots from the final code on a real game if anything changed
+- [ ] T9.24 tag both repos: `git tag -a v1.0-submission -m "Final submission: Police-Thief P2P, group nis-yar1"` and push the tags
+- [ ] T9.25 verify each tag freezes the commit whose hash appeared in the last counted game (or document the delta)
+- [ ] T9.26 Moodle: download the submission form, fill without moving/renaming fields, save as PDF — Nissim
+- [ ] T9.27 Moodle: download the submission form, fill without moving/renaming fields, save as PDF — Yarden
+- [ ] T9.28 submit on Moodle per member with the two repo links + the 8-char group code
+- [ ] T9.29 run the Appendix-C Table-6 checklist end-to-end: repos accessible, cross-links, tag pushed, README components, both screenshots, ≥2 games, separate emails, no secrets — each item with an evidence link
+- [ ] T9.30 email both repo links to rmisegal@gmail.com (general/repo-sharing address)
+- [ ] T9.31 push the final workshop-repo state; archive the branch history
+- [ ] T9.32 back up all league artifacts + report emails to offline storage
+- [ ] T9.33 freeze post-submission: no pushes after the tag except via the documented hotfix policy
+
+## Stage 9 addendum — submission-guidelines deltas (software_submission_guidelines-V3.pdf audit, 2026-07-13)
+
+- [x] T9.34 create docs/PROMPTS.md prompt book in both deliverable repos — log every significant agent prompt from now on (guidelines §8.3, HARD)  <!-- note: docs/PROMPTS.md in main repo; not yet in deliverable repos -->
+- [ ] T9.35 release script maps planning/ -> mandated names: docs/PRD.md, docs/PLAN.md, docs/TODO.md, docs/PRD_<mechanism>.md per stage (HARD)
+- [ ] T9.36 deliverable repos: commit the full docs/ suite BEFORE the first src commit (docs-approved-before-code auditable in git history, §2.5 HARD)
+- [ ] T9.37 add per-task status/owner columns to the deliverable TODO.md and keep updated during development (HARD)
+- [ ] T9.38 README user-manual sections: troubleshooting, configuration guide, contribution guidelines, deployment, License & Credits incl. reference-simulator attribution (HARD)
+- [x] T9.39 add LICENSE file to both deliverable repos  <!-- note: LICENSE in main repo; deliverable repos are placeholders -->
+- [x] T9.40 notebooks/analysis.ipynb — results-analysis notebook with LaTeX equations + citations, fed by lab D7 outputs (§9.2)
+- [ ] T9.41 token cost analysis table (input/output tokens, cost/M per model, optimization strategies) in README or docs (§11)
+- [ ] T9.42 C4 + UML + deployment diagrams (Mermaid) into docs/PLAN.md (§ diagrams)
+- [ ] T9.43 edge-case catalog (input -> expected response) + fault screenshots + stored automated test reports w/ pass rates
+- [ ] T9.44 .gitignore pins: .env, *.pem, *.key, credentials.json, token.json; CI secret scan covers all (HARD-lite)
+- [ ] T9.45 add logging_config.json to config architecture; keep constants.py inventoried in architecture.md (§7.3)
+- [ ] T9.46 package polish: __all__ in top __init__.py, pyproject author/license/description fields, no absolute paths audit (§14)
+- [ ] T9.47 PR-based partner review trail between Nissim & Yarden for at least the major feature branches (§8.2)
+- [ ] T9.48 ISO/IEC 25010 mapping table + Nielsen-heuristics UI note + screenshot gallery beyond the two mandatory shots
+- [ ] T9.49 frame one lab sweep as formal OAT sensitivity analysis with a statistical table (§9.1)
+- [ ] T9.50 sdk/ facade module exists by name and ALL logic flows through it (Table 5 code-review gate, HARD)
+- [ ] T9.51 Input/Output/Setup docstring convention on core classes + thread-safety notes in PLAN (§15-16)
+- [ ] T9.52 gatekeeper overflow = queue/backpressure at configured bound, never silent reject (Table 5) — align T7.10 wording

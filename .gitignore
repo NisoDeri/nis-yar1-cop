@@ -1,0 +1,37 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Build / artifacts
+dist/
+build/
+artifacts/lab/*.json
+
+# Secrets
+.env
+secrets/
+*token.json
+*credentials.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.pyc
+reference/
+police_thief_p2p.pdf
+*.pdf
+.venv/
+secrets/
+logs/
+.coverage
+__pycache__/
+*.pyc

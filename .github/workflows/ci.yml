@@ -1,0 +1,23 @@
+name: CI
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Sync deps
+        run: uv sync --group dev
+      - name: Ruff (E,F,W,I,N,UP,B,C4,SIM)
+        run: uv run ruff check src tests
+      - name: 150-line budget
+        run: uv run python scripts/check_line_budget.py
+      - name: Tests + coverage >= 85% (injected fakes only, no network/model)
+        run: uv run pytest
+      - name: Secrets scan (no credentials in tree)
+        run: |
+          ! grep -rIl --exclude-dir=.git -e "BEGIN PRIVATE KEY" -e '"refresh_token"' . || (echo "secret-like content found" && exit 1)

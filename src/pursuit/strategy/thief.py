@@ -37,19 +37,29 @@ class SurvivorThiefBrain(BrainBase):
         *,
         w_dist: float = 1.0,  # STRATEGY §7 thief.w_safety default
         w_mob: float = 0.4,  # STRATEGY §7 thief.w_mobility default
+        w_fresh: float = 0.9,
+        w_recent: float = 0.6,
         mobility_k: int = 3,  # STRATEGY §7 thief.mobility_k default
         jail_min_mobility: int = 2,  # STRATEGY §4.2: exits(c) < 2 is banned terrain
         decoy_enabled: bool = False,  # CREATIVITY-DESIGN E3 — DEFAULT OFF
         decoy_margin: int = 4,  # min flee distance before we spend tempo on misdirection
+        recent_window: int = 4,
+        jitter_epsilon: float = 0.0,
     ) -> None:
         super().__init__(talk, rng)
         self.w_dist = float(w_dist)
         self.w_mob = float(w_mob)
+        self.w_fresh = float(w_fresh)
+        self.w_recent = float(w_recent)
         self.mobility_k = int(mobility_k)
         self.jail_min_mobility = int(jail_min_mobility)
         self.decoy_enabled = bool(decoy_enabled)
         self.decoy_margin = int(decoy_margin)
+        self.recent_window = max(0, int(recent_window))
+        self.jitter_epsilon = max(0.0, float(jitter_epsilon))
         self._opponent_charges = 0  # refreshed every _decide_move from barriers_max
+        self._recent_positions: list[Cell] = []
+        self._last_step_seen = -1
 
     def _decide_move(
         self, state: Any, belief: BeliefLike, barriers_max: int
@@ -63,6 +73,7 @@ class SurvivorThiefBrain(BrainBase):
     ) -> tuple[Direction, Cell]:
         board, barriers = state.board, state.barriers
         threat = belief.most_likely()
+        self._remember_position(state.position, state.step_number)
         if self.decoy_enabled:  # E3: shape the scent only when far enough to spare tempo
             decoy = propose_decoy(
                 board, state.position, threat, barriers, moves,
@@ -75,19 +86,106 @@ class SurvivorThiefBrain(BrainBase):
         far = board.size * board.size  # exceeds any BFS distance; also the unreachable bonus
         ban = (self.w_dist + self.w_mob) * far + 1.0  # dominates any achievable score
 
-        def score(cell: Cell) -> float:
+        def score(move: tuple[Direction, Cell]) -> float:
+            direction, cell = move
             distance = board.bfs_distance(cell, threat, barriers)
             value = self.w_dist * (far if distance is None else distance)
             value += self.w_mob * len(board.reachable_cells(cell, barriers, self.mobility_k))
-            if self._opponent_charges > 0 and self._exits(board, cell, barriers) < (
-                self.jail_min_mobility
-            ):
+            if direction is not Direction.STAY and cell in state.visited:
+                value -= self.w_fresh
+            if direction is not Direction.STAY and cell in self._recent_positions:
+                recency = len(self._recent_positions) - self._recent_positions.index(cell)
+                value -= self.w_recent * recency
+            if direction is not Direction.STAY and self._trap_risky(board, cell, barriers):
                 value -= ban
             return value
 
-        return max(moves, key=lambda move: score(move[1]))  # ties -> move_set order
+        if self.jitter_epsilon > 0:
+            scored = [(score(move), move) for move in moves]
+            best_score = max(value for value, _move in scored)
+            near_best = [
+                move
+                for value, move in scored
+                if best_score - value <= self.jitter_epsilon
+                and (move[0] is Direction.STAY or not self._trap_risky(board, move[1], barriers))
+            ]
+            best = self._jitter_choice(near_best) if near_best else max(moves, key=score)
+        else:
+            best = max(moves, key=score)  # ties -> move_set order
+        current = board.bfs_distance(state.position, threat, barriers)
+        best_distance = board.bfs_distance(best[1], threat, barriers)
+        current_distance = far if current is None else current
+        best_distance_value = far if best_distance is None else best_distance
+        if best[0] is not Direction.STAY and best_distance_value >= current_distance:
+            return best
+        escape = self._non_stay_escape(board, moves, state.position, threat, barriers, state.visited)
+        return escape if escape is not None else best
+
+    def _non_stay_escape(
+        self,
+        board: Any,
+        moves: list[tuple[Direction, Cell]],
+        position: Cell,
+        threat: Cell,
+        barriers: set[Cell],
+        visited: set[Cell],
+    ) -> tuple[Direction, Cell] | None:
+        """Prefer real motion over a static mobility plateau when it does not lose distance."""
+        far = board.size * board.size
+        current = board.bfs_distance(position, threat, barriers)
+        current_distance = far if current is None else current
+        candidates: list[tuple[Direction, Cell]] = []
+        for direction, cell in moves:
+            if direction is Direction.STAY:
+                continue
+            distance = board.bfs_distance(cell, threat, barriers)
+            distance_value = far if distance is None else distance
+            if distance_value < current_distance:
+                continue
+            if self._trap_risky(board, cell, barriers):
+                continue
+            candidates.append((direction, cell))
+        if not candidates:
+            return None
+
+        def rank(move: tuple[Direction, Cell]) -> tuple[int, int, int, int]:
+            _direction, cell = move
+            distance = board.bfs_distance(cell, threat, barriers)
+            distance_value = far if distance is None else distance
+            mobility = len(board.reachable_cells(cell, barriers, self.mobility_k))
+            fresh = 0 if cell in visited else 1
+            recent = 0 if cell in self._recent_positions else 1
+            return (distance_value, fresh, recent, mobility)
+
+        ranked = [(rank(move), move) for move in candidates]
+        best_rank = max(value for value, _move in ranked)
+        return self._jitter_choice([move for value, move in ranked if value == best_rank])
+
+    def _remember_position(self, position: Cell, step_number: int) -> None:
+        """Maintain a short per-game trail so equal scores do not become loops."""
+        if step_number <= self._last_step_seen:
+            self._recent_positions = []
+        self._last_step_seen = step_number
+        self._recent_positions.append(position)
+        if self.recent_window:
+            self._recent_positions = self._recent_positions[-self.recent_window:]
+        else:
+            self._recent_positions = []
 
     @staticmethod
     def _exits(board: Any, cell: Cell, barriers: set[Cell]) -> int:
         """Post-move mobility: how many real (non-STAY) steps remain from ``cell``."""
         return sum(1 for d, _c in board.legal_moves(cell, barriers) if d is not Direction.STAY)
+
+    def _trap_risky(self, board: Any, cell: Cell, barriers: set[Cell]) -> bool:
+        """True when the cop can still seal every real exit from this cell."""
+        exits = self._exits(board, cell, barriers)
+        sealable_exits = max(2, self.jail_min_mobility)
+        return self._opponent_charges >= exits and exits <= sealable_exits
+
+    def _jitter_choice(self, moves: list[tuple[Direction, Cell]]) -> tuple[Direction, Cell]:
+        """Private-rng tie break so equally safe routes stop repeating exactly."""
+        if len(moves) <= 1:
+            return moves[0]
+        self._random_move = True
+        return moves[int(self.rng.random() * len(moves)) % len(moves)]

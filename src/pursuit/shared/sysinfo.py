@@ -109,7 +109,7 @@ def get_git_commit(repo_root: str | Path) -> str:
     """
     try:
         proc = subprocess.run(
-            ["git", "-C", str(repo_root), "rev-parse", "--short", "HEAD"],
+            ["git", "-C", str(repo_root), "rev-parse", "HEAD"],
             capture_output=True,
             text=True,
             timeout=_PROBE_TIMEOUT_SECONDS,

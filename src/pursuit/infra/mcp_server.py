@@ -85,10 +85,18 @@ def ensure_port_free(
 class PeerMcpServer:
     """Own-side FastMCP streamable-HTTP server (`police-thief-<role>`, path /mcp)."""
 
-    def __init__(self, role: str, host: str, port: int, inboxes: PeerInboxes) -> None:
+    def __init__(self, role: str, host: str, port: int, inboxes: PeerInboxes,
+                 stateless: bool = False) -> None:
         self.role = role
         self.host = host
         self.port = port
+        # stateless_http (opt-in per opponent): don't require an mcp-session-id header on
+        # follow-up calls — some peers (e.g. najamjad) initialize but don't echo the session
+        # id, which our stateful default rejects with 400 "Missing session ID". Our game state
+        # lives in the runtime, not the MCP session, so stateless is safe. DEFAULT is stateful:
+        # reference-kit peers (e.g. vm__fabi) require a bare GET to answer 406 (their T-protocol
+        # kills the game otherwise); stateful FastMCP returns 406, stateless returns 405.
+        self.stateless = bool(stateless)
         self.handlers = make_handlers(inboxes)
         self.mcp = FastMCP(f"police-thief-{role}")
         for name, handler in self.handlers.items():
@@ -100,7 +108,7 @@ class PeerMcpServer:
         thread = threading.Thread(
             target=self.mcp.run,
             kwargs={"transport": "http", "host": self.host, "port": self.port,
-                    "show_banner": False},
+                    "show_banner": False, "stateless_http": self.stateless},
             name=f"mcp-server-{self.role}",
             daemon=True,
         )

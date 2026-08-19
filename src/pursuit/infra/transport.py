@@ -10,6 +10,7 @@ Wire caller + ``timeouts`` dict are injected: no sockets in tests, no ConfigMana
 from __future__ import annotations
 
 import json
+import os
 import time
 from functools import partialmethod
 from typing import Any, Protocol
@@ -17,6 +18,15 @@ from typing import Any, Protocol
 import httpx
 
 from pursuit.exceptions import ConfigError, TransportError
+
+
+def _tls_verify() -> bool:
+    """Whether to verify the opponent's TLS cert (default True). Set ``PURSUIT_TLS_VERIFY=0``
+    on a TLS-intercepting network (e.g. a corporate MITM proxy) where the peer cannot chain
+    the re-signed cert — game integrity is Ed25519 + commit-reveal, never transport TLS, so
+    the opt-in bypass never weakens the match, only the transport wrapper the crypto replaces.
+    """
+    return os.environ.get("PURSUIT_TLS_VERIFY", "1").strip().lower() not in {"0", "false", "no"}
 
 REQUIRED_TIMEOUT_KEYS = ("retry_interval", "connect_timeout", "audit_timeout", "control_timeout")
 #: tool -> (argument key, deadline key in timeouts, suppress errors on expiry?)
@@ -72,7 +82,7 @@ def tool_ack(result: dict) -> dict:
 def http_call_tool(url: str, tool: str, arguments: dict, timeout: float) -> dict:
     """One full MCP session over httpx: initialize → initialized → tools/call."""
     headers = dict(_BASE_HEADERS)
-    with httpx.Client(timeout=timeout) as client:
+    with httpx.Client(timeout=timeout, verify=_tls_verify()) as client:
         init = {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {
             "protocolVersion": _PROTOCOL_VERSION, "capabilities": {},
             "clientInfo": {"name": "pursuit", "version": "0.1.0"}}}

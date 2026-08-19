@@ -1,14 +1,12 @@
 """TurnHandler — fold one opponent TurnMessage into MY local truth (Zero-Trust gate).
 
-Everything is validated against MY replica of the shared physics BEFORE any mutation
-(rules 4-5): envelope, sender, step sequence (retries legally duplicate — a seen step drops
-idempotently, INTEROP §1), role-legal claim fields, barrier legality (A3), smell geometry.
-A violation takes the breach path (counted, surfaced); ``max_breaches`` consecutive
-rejects end the sub-game (``technical_loss`` 0/0, D4). Valid messages fold in seam order
-(STRATEGY §2.4): truthful barrier (rule 14) -> scent ``absorb`` -> belief PREDICT
-(``diffuse`` on MY cell) -> UPDATE (``observe_smell``); hint/capture-claim stashed for the
-brain/sender; ``capture_claim`` answered TRUTHFULLY (rule 21); rules 46-47 self-detected.
-Each valid opponent ``commit`` is retained to bind live vs revealed at the end-game audit.
+Everything is validated against MY replica of the shared physics BEFORE any mutation (rules
+4-5): envelope, sender, step sequence, role-legal claims, barrier legality (A3), smell geometry.
+Re-delivery is deduped on the COMMIT (delivery §7.1): a repeated commit absorbs, a DIFFERENT
+commit for a played step is equivocation -> breach; ``max_breaches`` consecutive breaches end
+the sub-game (0/0, D4). Valid messages fold in seam order (§2.4): barrier (rule 14) -> scent
+``absorb`` -> PREDICT (``diffuse`` on MY cell) -> UPDATE; capture-claim answered TRUTHFULLY
+(rule 21); rules 46-47 self-detected; each ``commit`` retained to bind live vs revealed at audit.
 """
 
 from __future__ import annotations
@@ -68,8 +66,10 @@ class TurnHandler:
             msg = message if isinstance(message, TurnMessage) else TurnMessage.from_wire(message)
         except TransportError as exc:
             return self._breach(fsm, self.last_step, f"envelope: {exc}")
-        if msg.step <= self.last_step:
-            return ProcessedTurn(kind=DUPLICATE, step=msg.step, hint=msg.hint)
+        if msg.step <= self.last_step:  # already-applied step; delivery §7.1 dedups on COMMIT
+            if self.commits.get(msg.step) not in (None, msg.commit):
+                return self._breach(fsm, msg.step, f"equivocation on step {msg.step}")
+            return ProcessedTurn(kind=DUPLICATE, step=msg.step, hint=msg.hint)  # redelivery absorbs
         try:
             barrier, response = self._validate(msg, own_state, fsm)
             scent_reader.absorb(msg.smell_grid)  # validates + mirrors the authoritative trail

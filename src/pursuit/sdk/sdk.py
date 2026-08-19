@@ -60,7 +60,11 @@ def _real_transport(config: ConfigManager, role: Role, inboxes: PeerInboxes) -> 
     from pursuit.infra.transport import OpponentTransport
 
     host = str(_optional(config.private, "network.host", "127.0.0.1"))
-    PeerMcpServer(role.value, host, int(config.private("network.my_port")), inboxes).start()
+    # stateful (406) by default for reference-kit peers; opt-in stateless for peers that don't
+    # echo mcp-session-id (najamjad). Flag lives in the private [network] table.
+    stateless = bool(_optional(config.private, "network.stateless_http", False))
+    PeerMcpServer(role.value, host, int(config.private("network.my_port")), inboxes,
+                  stateless=stateless).start()
     return OpponentTransport(str(config.private("network.opponent_url")), _timeouts(config))
 
 
@@ -109,9 +113,25 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
              fake_opponent: bool = False, transport: Any = None, inboxes: Any = None,
              keypair: tuple[bytes, bytes] | None = None, rng: random.Random | None = None,
              logs_dir: str | Path | None = None, sysinfo: dict[str, Any] | None = None,
-             github_commit: str | None = None, observer: Any = None) -> dict[str, Any]:
-    """Load + validate config, build the stack ONCE, run the series, return its summary."""
+             github_commit: str | None = None, observer: Any = None,
+             alternate: bool = True, scent_dialect: str | None = None,
+             mode: str | None = None, series_gate_dir: str | Path | None = None,
+             series_gate_timeout: float | None = None) -> dict[str, Any]:
+    """Load + validate config, build the stack ONCE, run the series, return its summary.
+
+    ``scent_dialect`` (optional) overrides ``pheromones.dialect`` at runtime — the
+    per-opponent scent-model selector (``reference`` / ``book`` / ``multiplicative_book_v1``).
+    It is agreed out-of-band, not a wire term, so it never changes the signed terms or uid.
+
+    ``mode`` (``friendly`` | ``counted``) overrides ``game.mode``: one switch flips the report
+    recipient (friendly inboxes vs the lecturer) and the counted counters/diversity. Default
+    (None) keeps the config's mode; the shipped default is the SAFE ``friendly``.
+    """
     config = ConfigManager.load(config_dir)
+    if scent_dialect is not None:
+        config.override_game("pheromones.dialect", scent_dialect)
+    if mode is not None:
+        config.set_private("game.mode", mode)
     config.validate_agreement()  # fail-fast on any missing agreed term (brief §10)
     my_role = Role(role)
     games = int(num_games if num_games is not None
@@ -121,6 +141,7 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
     inboxes = inboxes if inboxes is not None else PeerInboxes()
     sysinfo = sysinfo if sysinfo is not None else collect()
     commit = github_commit if github_commit is not None else get_git_commit(_REPO_ROOT)
+    config.set_private("game.github_commit", commit)  # so build_identity carries it on the wire
     opponent_thread = None
     if fake_opponent:
         transport, opponent_thread = _fake_opponent(config, my_role, inboxes, games,
@@ -131,11 +152,25 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
     watchdog = Watchdog(float(config.game("network_and_league.watchdog_timeout_sec")),
                         lambda name: logger.warning("watchdog: '%s' heartbeat frozen", name))
     watchdog.start()
+    series_gate = None
+    if series_gate_dir is not None:
+        from pursuit.sdk.sequence import FileSeriesGate
+
+        gate_timeout = float(series_gate_timeout if series_gate_timeout is not None else
+                             _optional(config.private, "network.series_gate_timeout_seconds",
+                                       1800.0))
+
+        def report_gate(message: str) -> None:
+            print(f"LIVE role={my_role.value} event=series_gate {message}", flush=True)
+
+        series_gate = FileSeriesGate(series_gate_dir, timeout=gate_timeout,
+                                     reporter=report_gate)
     try:
         summary = run_series(
             config, my_role, games, transport, inboxes, keypair=keypair,
             brain_factory=lambda r: resolve_brain(config, r, rng), sysinfo=sysinfo,
-            github_commit=commit, watchdog=watchdog, observer=observer,
+            github_commit=commit, watchdog=watchdog, observer=observer, alternate=alternate,
+            series_gate=series_gate,
             logs_dir=logs_dir if logs_dir is not None
             else _optional(config.private, "paths.logs_dir", "logs"))
     finally:

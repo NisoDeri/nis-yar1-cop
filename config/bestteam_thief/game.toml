@@ -1,0 +1,89 @@
+# bestteam pairing: PRIVATE thief-process settings. Shared terms are in game.json.
+version = "0.1.0"
+
+[game]
+mode = "friendly"
+counted_games_so_far = 3
+group_name = "nis-yar1"
+group_id = "nis-yar1"
+members = ["Nissim Deri", "Yarden Tziar"]
+sub_game_number = 1
+repos = { cop = "https://github.com/NisoDeri/nis-yar1-cop", thief = "https://github.com/NisoDeri/nis-yar1-thief" }
+mcp_servers = { cop = "https://duckling-judgingly-frigidly.ngrok-free.dev/cop/mcp", thief = "https://duckling-judgingly-frigidly.ngrok-free.dev/thief/mcp" }
+
+[belief]
+smell_trust_weight = 4.0
+hint_trust_prior = 0.5
+reliability_forget = 0.95
+hint_prior_strength = 2.0
+sigma_obs = 0.1
+zero_scent_weight = 0.6
+resync_floor = 1.0e-8
+motion_eta_thief = 2.0
+motion_eta_police = 1.5
+kernel_mobility_mu = 0.6
+kernel_mobility_k = 3
+lie_inversion = true
+lie_inversion_below = 0.3
+
+[police]
+barrier_finisher_p = 0.65
+cage_radius = 5
+close_barrier_p = 0.35
+
+[thief]
+w_dist = 1.2
+w_mob = 0.5
+mobility_k = 4
+jail_min_mobility = 2
+decoy_enabled = true
+decoy_margin = 5
+jitter_epsilon = 1.25
+
+[strategy]
+police_class = "pursuit.strategy.adaptive_police:AdaptivePoliceBrain"
+thief_class = "pursuit.strategy.center_thief:CenterThief"
+profile_opponent = true
+fuse_hints = true
+
+[trash_talk]
+provider = "template"
+model = "qwen3:14b"
+interpreter_model = "qwen2.5:7b"
+every_n_steps = 2
+deadline_seconds = 8
+ollama_url = "http://localhost:11434"
+
+[llm_defense]
+injection_penalty = 0.25
+max_lie_rate = 0.35
+
+[network]
+host = "127.0.0.1"
+my_port = 8801
+opponent_url = "https://itinerary-single-overjoyed.ngrok-free.dev/mcp"
+# Must outlive a legally slow 35 x 30 s sub-game (1,050 s) while this role is idle.
+turn_timeout_seconds = 1200
+brain_deadline_seconds = 15.0
+poll_interval_seconds = 0.5
+connect_timeout_seconds = 1200
+retry_interval_seconds = 5.0
+audit_send_timeout_seconds = 30
+series_gate_timeout_seconds = 1800
+
+[email]
+recipient_friendly = "itay.malich2@gmail.com, nissimderi123@gmail.com"
+recipient_counted = "rmisegal+uoh26finalgame@gmail.com"
+sender = "nissimderi123@gmail.com"
+enabled = false
+credentials_dir = "secrets"
+
+[paths]
+logs_dir = "logs"
+
+[play]
+step_speed_seconds = 0.7
+seed = 1234
+
+[fsm]
+max_illegal_events = 3

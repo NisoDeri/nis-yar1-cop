@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import tomllib
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +88,8 @@ class ConfigManager:
         private_terms: dict[str, Any],
         rate_limits: dict[str, Any],
     ) -> None:
-        self._game = game_terms
+        self._source_game = deepcopy(game_terms)
+        self._game = _runtime_game_terms(game_terms)
         self._private = private_terms
         self._rate_limits = rate_limits
 
@@ -110,9 +112,46 @@ class ConfigManager:
         """Dotted-path read from the shared game.json (agreed terms)."""
         return _lookup(self._game, key_path, GAME_JSON)
 
+    def override_game(self, key_path: str, value: Any) -> None:
+        """Patch one agreed-term value in memory — the runtime scent-dialect selector.
+
+        Both peers must still hold byte-identical SIGNED terms, but the scent dialect
+        is agreed OUT-OF-BAND (it is not one of ``build_terms``'s 14 wire keys), so
+        overriding ``pheromones.dialect`` here changes neither the signed terms nor the
+        ``game_uid`` — it only swaps which locked scent law this peer runs. The parent
+        node must already exist (fail-fast, like every other config read).
+        """
+        parts = key_path.split(".")
+        node: Any = self._game
+        for part in parts[:-1]:
+            if not isinstance(node, dict) or part not in node:
+                raise ConfigError(f"cannot override '{key_path}': '{part}' missing in {GAME_JSON}")
+            node = node[part]
+        if not isinstance(node, dict) or parts[-1] not in node:
+            raise ConfigError(f"cannot override '{key_path}': leaf missing in {GAME_JSON}")
+        node[parts[-1]] = value
+
     def private(self, key_path: str) -> Any:
         """Dotted-path read from the private game.toml."""
         return _lookup(self._private, key_path, GAME_TOML)
+
+    def set_private(self, key_path: str, value: Any) -> None:
+        """Set a private (game.toml) value in memory, creating parents as needed.
+
+        The runtime friendly/counted MODE selector: ``--mode`` writes ``game.mode`` here so
+        one switch flips both the report recipient (friendly inboxes vs the lecturer) and the
+        counted counters/diversity — private, local, never on the wire, so it can never touch
+        the signed terms or game_uid.
+        """
+        parts = key_path.split(".")
+        node: dict[str, Any] = self._private
+        for part in parts[:-1]:
+            child = node.get(part)
+            if not isinstance(child, dict):
+                child = {}
+                node[part] = child
+            node = child
+        node[parts[-1]] = value
 
     def service_limits(self, service: str) -> dict[str, Any]:
         """Gatekeeper limits block for one service (gmail / ollama / ...)."""
@@ -133,6 +172,30 @@ class ConfigManager:
         The import is lazy: ``negotiation`` imports us, so a module-level import would cycle.
         """
         from pursuit.domain.crypto.canonical import canonical_bytes, sha256_hex
-        from pursuit.domain.negotiation import build_terms
 
-        return sha256_hex(canonical_bytes(build_terms(self)))
+        return sha256_hex(canonical_bytes(self._source_game))
+
+
+def scent_params(game: Any) -> dict[str, Any]:
+    """Adapt the signed pheromones block to the ScentParams vocabulary (shared helper)."""
+    paths = {"dialect": "pheromones.dialect", "board_size": "board_and_agents.grid_size",
+             "smell_grid_size": "pheromones.pheromone_grid_size",
+             "emit_intensity": "pheromones.pheromone_center_intensity",
+             "decay_per_step": "pheromones.pheromone_decay",
+             "min_center_intensity": "pheromones.pheromone_min_center_intensity"}
+    return {key: game(path) for key, path in paths.items()}
+
+
+def _runtime_game_terms(game_terms: dict[str, Any]) -> dict[str, Any]:
+    """Normalize partner-shared config variants without changing the config hash source."""
+    game = deepcopy(game_terms)
+    game.setdefault("schema_version", "1.3")
+    pheromones = game.setdefault("pheromones", {})
+    if (
+        "pheromone_min_center_intensity" not in pheromones
+        and "min_center_intensity" in pheromones
+    ):
+        pheromones["pheromone_min_center_intensity"] = pheromones["min_center_intensity"]
+    pheromones.setdefault("dialect", "reference")
+    game.setdefault("crypto", {}).setdefault("dialect", "reference")
+    return game

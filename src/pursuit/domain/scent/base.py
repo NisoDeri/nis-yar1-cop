@@ -69,6 +69,18 @@ class ScentModel(ABC):
     def decay(self) -> None:
         """Dialect decay law — called exactly once per full turn (message-driven)."""
 
+    def full_turn(self, center: Cell) -> None:
+        """Advance one full turn at ``center`` in this dialect's pinned cadence.
+
+        Default (reference / book-chebyshev): deposit then decay — the sender's
+        order, shared by the live emitter (turn_sender), the lab, and the belief
+        forward model. A dialect whose law pins a different order
+        (``multiplicative_book_v1``: decay-then-deposit, clamp-after-add) overrides
+        this so every emission site stays byte-consistent with the rule-23 lock.
+        """
+        self.deposit(center)
+        self.decay()
+
     def snapshot(self) -> dict[str, float]:
         """Wire grid ``{"r,c": round(v, 3)}`` — positive cells, row-major key order."""
         rounded = ((cell, round(self._grid[cell], 3)) for cell in sorted(self._grid))
@@ -109,13 +121,12 @@ class ScentModel(ABC):
         pre-series (D3). The grid is wire-rounded, so rounding is locked too.
         """
         probe = type(self)(replace(self.params, board_size=EXAMPLE_BOARD_SIZE))
-        probe.deposit(EXAMPLE_CELL)
-        probe.decay()
+        probe.full_turn(EXAMPLE_CELL)
         return {
             "dialect": self.dialect,
             "formula": self.formula,
             "rounding": "wire values are round(v, 3) (half-even); 0.000 cells omitted",
             "params": asdict(probe.params),
-            "operations": [f"deposit({EXAMPLE_CELL})", "decay()"],
+            "operations": [f"full_turn({EXAMPLE_CELL})"],
             "grid": probe.snapshot(),
         }

@@ -89,6 +89,7 @@ class SealedLog:
         github_commit: str,
         counted_games: int,
         keypair: tuple[bytes, bytes],
+        sub_game_number: int | None = None,
     ) -> dict[str, Any]:
         """Seal ``records[0]`` — the Ed25519-signed system_spec declaration (D14).
 
@@ -105,7 +106,10 @@ class SealedLog:
             "model": config.private("trash_talk.model"),
             "code_version": config.private("version"),
             "group_name": config.private("game.group_name"),
-            "sub_game_number": config.private("game.sub_game_number"),
+            "sub_game_number": (
+                int(sub_game_number) if sub_game_number is not None
+                else config.private("game.sub_game_number")
+            ),
             "github_commit": github_commit,
             "counted_games": counted_games,
             "public_key": public_pem.decode("ascii"),

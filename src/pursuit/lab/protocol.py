@@ -74,9 +74,8 @@ class Side:
     hint: str | None = None
 
     def emit(self, decision: LabDecision) -> None:
-        """Sender order per STRATEGY §1.2: deposit → decay → snapshot."""
-        self.scent.deposit(self.state.position)
-        self.scent.decay()
+        """Sender order per STRATEGY §1.2: one dialect-pinned full turn → snapshot."""
+        self.scent.full_turn(self.state.position)
         self.snapshot = self.scent.snapshot()
         self.hint = decision.hint
 

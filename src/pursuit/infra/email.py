@@ -22,6 +22,15 @@ log = logging.getLogger(__name__)
 _DEFAULT_TO = "rmisegal+uoh26finalgame@gmail.com"
 _MAX_PER_HOUR = 6
 
+
+def _recipient_list(to: str) -> list[str]:
+    """Split a recipient string (one address, or comma-separated many) into envelope addrs.
+
+    A league friendly reports to BOTH teams' inboxes in one send, so ``to`` may carry
+    several comma-separated addresses; SMTP needs them as a real list, not one string.
+    """
+    return [addr.strip() for addr in str(to).split(",") if addr.strip()]
+
 try:
     import google.auth.transport.requests  # type: ignore[import-untyped]
     import google.oauth2.credentials  # type: ignore[import-untyped]
@@ -48,12 +57,20 @@ class _RateLimiter:
         return True
 
 
-def _mime(subject: str, text: str, data: dict[str, Any]) -> MIMEMultipart:
+def _mime(
+    subject: str,
+    text: str,
+    data: dict[str, Any],
+    sender: str | None = None,
+    filename: str = "result.json",
+) -> MIMEMultipart:
     msg = MIMEMultipart()
     msg["Subject"] = subject
+    if sender:
+        msg["From"] = sender
     msg.attach(MIMEText(text, "plain", "utf-8"))
     att = MIMEApplication(json.dumps(data, indent=2, ensure_ascii=False).encode(), _subtype="json")
-    att.add_header("Content-Disposition", "attachment", filename="result.json")
+    att.add_header("Content-Disposition", "attachment", filename=filename)
     msg.attach(att)
     return msg
 
@@ -76,6 +93,7 @@ class GmailSender:
         subject: str,
         body_dict: dict[str, Any],
         to: str | None = None,
+        sender: str | None = None,
     ) -> dict[str, Any]:
         """Send a match-result email. Returns ``{"sent": bool, "reason": str}``."""
         if not self._rl.allow():
@@ -83,12 +101,9 @@ class GmailSender:
             return {"sent": False, "reason": "rate_limit"}
 
         recipient = to or _DEFAULT_TO
-        summary = (
-            f"Result: {body_dict.get('result', '?')} | "
-            f"Steps: {body_dict.get('steps', '?')} | "
-            f"Group: {body_dict.get('group', 'nis-yar1')}"
-        )
-        msg = _mime(subject, f"{summary}\n\n{json.dumps(body_dict, indent=2)}", body_dict)
+        game_id = str(body_dict.get("game_id", "game"))
+        body = json.dumps(body_dict, indent=2, ensure_ascii=False)
+        msg = _mime(subject, body, body_dict, sender, f"result_{game_id}.json")
 
         if _GOOGLE_OK and self._token.exists():
             return self._oauth(msg, recipient)
@@ -117,7 +132,7 @@ class GmailSender:
             )
             if creds.expired and creds.refresh_token:
                 creds.refresh(google.auth.transport.requests.Request())
-            msg["To"] = to
+            msg["To"] = ", ".join(_recipient_list(to))  # Gmail API delivers per the To header
             raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
             _build("gmail", "v1", credentials=creds).users().messages().send(
                 userId="me", body={"raw": raw}
@@ -132,15 +147,16 @@ class GmailSender:
         import smtplib
 
         try:
-            c = json.loads(self._smtp.read_text(encoding="utf-8"))
-            msg["To"], msg["From"] = to, c["user"]
+            c = json.loads(self._smtp.read_text(encoding="utf-8-sig"))
+            addrs = _recipient_list(to)  # envelope recipients — a real list, not one string
+            msg["To"], msg["From"] = ", ".join(addrs), msg.get("From") or c["user"]
             with smtplib.SMTP(
                 c.get("host", "smtp.gmail.com"), int(c.get("port", 587)), timeout=30
             ) as s:
                 s.ehlo()
                 s.starttls()
                 s.login(c["user"], c["password"])
-                s.sendmail(c["user"], [to], msg.as_string())
+                s.sendmail(c["user"], addrs, msg.as_string())
             log.info("email sent via SMTP to %s", to)
             return {"sent": True, "reason": "smtp"}
         except Exception as exc:  # noqa: BLE001

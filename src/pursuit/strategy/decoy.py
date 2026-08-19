@@ -46,7 +46,9 @@ def _safe_moves(
         distance = board.bfs_distance(cell, threat, barriers)
         if distance is None or distance < floor:
             continue
-        if opponent_charges > 0 and _exits(board, cell, barriers) < jail_min_mobility:
+        exits = _exits(board, cell, barriers)
+        sealable_exits = max(2, jail_min_mobility)
+        if opponent_charges >= exits and exits <= sealable_exits:
             continue
         safe.append((direction, cell))
     return safe

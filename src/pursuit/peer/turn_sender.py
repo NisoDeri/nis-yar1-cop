@@ -1,15 +1,12 @@
 """TurnSender — decide, guard, apply, seal, send one of MY turns (INTEROP §2.2, rules 14/21/26-27).
 
-Guardrail order is the point (STRATEGY §8): the brain's decision is validated against the
-SAME domain rules the handler applies to the opponent — an illegal move is NEVER sent; it
-degrades to the first legal move (flagged ``random_move`` in the sealed record) or the
-jailed-HOLD backstop. ``barrier_placed`` / ``capture_claim`` come from the APPLIED move,
-never from brain claims (rule 14). The hint is linted (word cap + digit ban) BEFORE sealing,
-so wire hint and audited hint are the same bytes. Step accounting follows ruling A5 through
-:class:`~pursuit.domain.rules.StepCounter`: MOVE, HOLD and BARRIER each consume one of MY
-steps (build one fresh TurnSender per sub-game, next to its fresh OwnGameState). A truthful
-``claim_response`` with ``caught: true`` makes this call the concession: sealed HOLD +
-the fixed "You got me." literal.
+Guardrail order (STRATEGY §8): the decision is validated against the SAME rules the handler
+applies to the opponent — an illegal move is NEVER sent; it degrades to the first legal move
+(flagged ``random_move``) or the jailed-HOLD backstop. ``barrier_placed``/``capture_claim`` come
+from the APPLIED move, not brain claims (rule 14); the hint is linted BEFORE sealing (wire ==
+audited bytes). Step accounting per A5: MOVE/HOLD/BARRIER each consume one MY step. A truthful
+``claim_response`` caught:true is the concession (sealed HOLD + "You got me."). The brain runs
+under a wall-clock bound (peer/brain_clock) so a hang degrades to a safe HOLD. Fresh per sub-game.
 """
 
 from __future__ import annotations
@@ -23,6 +20,7 @@ from pursuit.domain import rules
 from pursuit.domain.protocol import CAPTURE_CONCESSION_HINT, SILENCE_HINT, TurnMessage
 from pursuit.domain.protocol_audit import INTENTS, format_move_string, sealed_payload
 from pursuit.exceptions import IllegalMoveError, IllegalTransitionError
+from pursuit.peer.brain_clock import decide_bounded
 from pursuit.peer.fsm import State
 
 
@@ -50,10 +48,13 @@ class TurnSender:
     """One peer's outbound turn pipeline for a single sub-game."""
 
     def __init__(self, role: Role | str, *, barriers_max: int, survival_threshold: int,
-                 hint_max_words: int, setting: str, now: Any = None) -> None:
+                 hint_max_words: int, setting: str, brain_deadline: float | None = None,
+                 model: str = "stub", now: Any = None) -> None:
         self.role = Role(role)  # every game parameter arrives from the signed config
         self.barriers_max, self.survival_threshold = int(barriers_max), int(survival_threshold)
         self.hint_max_words, self.setting = int(hint_max_words), setting
+        self.brain_deadline = brain_deadline  # wall-clock bound on the move (peer/brain_clock)
+        self.model = str(model or "stub")
         self.step_counter = rules.StepCounter()  # MY turn clock — ruling A5 semantics
         self._now = now or (lambda: datetime.now(UTC).isoformat())
 
@@ -70,8 +71,8 @@ class TurnSender:
             hint, verdict, reasoning, prompt, seconds = (
                 CAPTURE_CONCESSION_HINT, "truth", "capture concession (rule 21)", "", 0.0)
         else:
-            decision = brain.decide(own_state, belief, opponent_hint or "", self.setting,
-                                    self.barriers_max, deadline_seconds)
+            args = (own_state, belief, opponent_hint or "", self.setting, self.barriers_max)
+            decision = decide_bounded(brain, (*args, deadline_seconds), self.brain_deadline)
             verdict = decision.verdict if decision.verdict in INTENTS else "truth"
             hint, reasoning, prompt = decision.hint, decision.reasoning, decision.prompt_text
             seconds = decision.response_seconds
@@ -80,13 +81,13 @@ class TurnSender:
         step = self.step_counter.record_valid_move()  # MOVE/HOLD/BARRIER all count (A5)
         own_state.step_number = step  # BARRIER / jailed-HOLD never route through apply_step
         hint = lint_hint(hint, self.hint_max_words)  # BEFORE sealing: wire == audited bytes
-        scent_mine.deposit(own_state.position)  # sender order: deposit -> decay -> snapshot
-        scent_mine.decay()
+        scent_mine.full_turn(own_state.position)  # dialect-pinned cadence, then snapshot
         record = sealer.seal_step(sealed_payload(
             own_state.state_string(), format_move_string(move_type, direction), verdict, hint,
             step, self.role.value,
             extra={"prompt_discussion": {"llm_prompt": prompt, "llm_reasoning": reasoning,
                                          "bluff_classification": verdict},
+                   "model": self.model,
                    "response_seconds": seconds, "random_move": random_move}))
         survived = (self.role is Role.THIEF and not concede
                     and rules.survived(self.step_counter, self.survival_threshold))

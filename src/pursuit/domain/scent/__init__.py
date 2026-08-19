@@ -8,6 +8,7 @@ negotiation instead of silently corrupting a game (architecture.md §3).
 
 from pursuit.domain.scent.base import ScentModel
 from pursuit.domain.scent.book import BookScent
+from pursuit.domain.scent.book_v1 import MultiplicativeBookV1Scent
 from pursuit.domain.scent.params import STAMP_LAW, ScentParams
 from pursuit.domain.scent.reference import ReferenceScent
 from pursuit.exceptions import ConfigError
@@ -15,6 +16,7 @@ from pursuit.exceptions import ConfigError
 _DIALECTS: dict[str, type[ScentModel]] = {
     BookScent.dialect: BookScent,
     ReferenceScent.dialect: ReferenceScent,
+    MultiplicativeBookV1Scent.dialect: MultiplicativeBookV1Scent,
 }
 _PARAM_KEYS = tuple(ScentParams.__dataclass_fields__)
 
@@ -40,6 +42,7 @@ def make_scent_model(pheromones_cfg: dict) -> ScentModel:
 __all__ = [
     "STAMP_LAW",
     "BookScent",
+    "MultiplicativeBookV1Scent",
     "ReferenceScent",
     "ScentModel",
     "ScentParams",

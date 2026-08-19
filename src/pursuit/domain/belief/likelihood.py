@@ -38,14 +38,14 @@ def forward_snapshot(
 ) -> dict[str, float]:
     """S_hat_c: the snapshot the locked law emits if the opponent stands at ``center``.
 
-    Replays the sender's order — absorb S_{t-1}, deposit, decay, wire-round —
-    on a scratch instance of the SAME dialect class, so merge/decay/rounding
-    are byte-faithful to the rule-23 lock by construction.
+    Replays the sender's order — absorb S_{t-1}, one dialect-pinned ``full_turn``,
+    wire-round — on a scratch instance of the SAME dialect class, so merge/decay
+    order/rounding are byte-faithful to the rule-23 lock by construction (reference:
+    deposit-then-decay; multiplicative_book_v1: decay-then-deposit, clamp-after-add).
     """
     probe = type(model)(model.params)
     probe.absorb(s_prev)
-    probe.deposit(center)
-    probe.decay()
+    probe.full_turn(center)
     return probe.snapshot()
 
 

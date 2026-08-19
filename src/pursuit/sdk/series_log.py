@@ -390,10 +390,15 @@ def maybe_email(config: Any, summary: dict[str, Any], result: dict[str, Any],
         recipient = _mode_recipient(config)
         sender = _private_default(config, "email.sender", None)
         credentials_dir = _private_default(config, "email.credentials_dir", "secrets")
-        Gatekeeper.from_config(config, "email").execute(
+        delivery = Gatekeeper.from_config(config, "email").execute(
             GmailSender(Path(credentials_dir) / "token.json",
                         Path(credentials_dir) / "smtp.json").send_result,
             subject, result, recipient, sender)  # result = the canonical artifact dict
+        if isinstance(delivery, dict) and delivery.get("sent"):
+            print(f"  series email: SENT | {subject} | attachment=result_{result.get('game_id')}.json")
+        else:
+            reason = delivery.get("reason", "unknown") if isinstance(delivery, dict) else "unknown"
+            print(f"  series email: NOT SENT ({reason})")
     except Exception:  # noqa: BLE001 — a send failure must NEVER crash the series
         pass
 
@@ -406,9 +411,7 @@ def _private_default(config: Any, key_path: str, default: Any) -> Any:
 
 
 def _report_subject(result: dict[str, Any]) -> str:
-    game_id = str(result.get("game_id", ""))
     final = dict(result.get("final_result", {}) or {})
-    totals = dict(final.get("total_score", {}) or {})
-    verdict = "series_tie" if final.get("series_tie") else f"winner={final.get('winner_group')}"
-    score = " ".join(f"{gid}:{totals[gid]}" for gid in sorted(totals))
-    return f"P2P league SERIES result - {game_id} - {verdict} - {score}"
+    if final.get("series_tie"):
+        return "Police-Thief series result: series tie"
+    return f"Police-Thief series result: winner {final.get('winner_group')}"

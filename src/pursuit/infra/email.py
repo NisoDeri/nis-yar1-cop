@@ -69,7 +69,9 @@ def _mime(
     if sender:
         msg["From"] = sender
     msg.attach(MIMEText(text, "plain", "utf-8"))
-    att = MIMEApplication(json.dumps(data, indent=2, ensure_ascii=False).encode(), _subtype="json")
+    # Match the league's established email shape: the body is the entire JSON
+    # document and the attachment carries those same UTF-8 bytes.
+    att = MIMEApplication(text.encode("utf-8"), _subtype="json")
     att.add_header("Content-Disposition", "attachment", filename=filename)
     msg.attach(att)
     return msg

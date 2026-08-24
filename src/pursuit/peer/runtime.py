@@ -1,4 +1,4 @@
-"""PeerRuntime — one sub-game: handshake → thief-first turn loop → audit-on-every-ending
+"""PeerRuntime — one sub-game: handshake → parity initiator → audit-on-every-ending
 (A6/D4); an optional ``observer`` gets a per-tick board snapshot for the live GUI."""
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ class PeerRuntime:
                 pass
 
     def run(self) -> SubgameOutcome:
-        """Handshake → step-0 seal → thief-first turn loop → mutual audit → outcome."""
+        """Handshake → step-0 seal → parity-initiated turns → mutual audit → outcome."""
         started_at = datetime.now(UTC).isoformat()
         self._progress("starting")
         self.fsm.advance(State.NEGOTIATING)

@@ -1,4 +1,4 @@
-"""PeerRuntime — one sub-game: handshake → parity initiator → audit-on-every-ending
+"""PeerRuntime — one sub-game: handshake → thief-first turns → audit-on-every-ending
 (A6/D4); an optional ``observer`` gets a per-tick board snapshot for the live GUI."""
 
 from __future__ import annotations
@@ -103,7 +103,7 @@ class PeerRuntime:
                 pass
 
     def run(self) -> SubgameOutcome:
-        """Handshake → step-0 seal → parity-initiated turns → mutual audit → outcome."""
+        """Handshake → step-0 seal → thief-first turns → mutual audit → outcome."""
         started_at = datetime.now(UTC).isoformat()
         self._progress("starting")
         self.fsm.advance(State.NEGOTIATING)
@@ -119,12 +119,12 @@ class PeerRuntime:
         )
         self.log.step0_record(self.config, *self._step0_args, self.keypair,
                               sub_game_number=self.sub_game_number)
-        first_mover = first_mover_for_subgame(self.sub_game_number)
-        self.fsm.advance(State.MY_TURN if self.role is first_mover else State.OPP_TURN)
+        i_open = opens_subgame(self.role)
+        self.fsm.advance(State.MY_TURN if i_open else State.OPP_TURN)
         self._progress(
             "first_turn_ready",
-            first_mover=first_mover.value,
-            action="send_now" if self.role is first_mover else "wait_for_receive_turn",
+            first_mover=Role.THIEF.value,
+            action="send_now" if i_open else "wait_for_receive_turn",
         )
         try:
             result, winner = self._turn_loop()
@@ -230,17 +230,9 @@ class PeerRuntime:
                 return (GameResult.SURVIVAL, Role.THIEF)  # THEIR move ceiling is spent
 
 
-def first_mover_for_subgame(sub_game_number: int | None) -> Role:
-    """Return police for odd windows and thief for even windows.
-
-    ``None`` preserves the legacy single-game/fake-opponent convention for callers
-    that do not declare a logical series window.
-    """
-    if sub_game_number is None:
-        return Role.THIEF
-    if isinstance(sub_game_number, bool) or sub_game_number < 1:
-        raise ValueError("sub_game_number must be a positive integer")
-    return Role.POLICE if sub_game_number % 2 else Role.THIEF
+def opens_subgame(role: Role | str) -> bool:
+    """True only for THIEF: the thief opens every sub-game, independent of parity."""
+    return Role(role) is Role.THIEF
 
 
 def _end_state_digest(role: Role, result: GameResult, winner: Role | None,

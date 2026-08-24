@@ -23,7 +23,6 @@ from pursuit.shared.config import ConfigManager
 
 OPTIONAL_LOCK_FIELDS: tuple[str, ...] = (
     "config_sha256",
-    "scent_model_sha256",
     "wire_shape_sha256",
     "info_mode_sha256",
     "smell_binding_sha256",
@@ -266,5 +265,9 @@ def run_handshake(
             continue
         try:
             return _candidate_handshake(mine, theirs, config, sub_game_number, role)
-        except (CryptoError, NegotiationError):
+        except (CryptoError, NegotiationError) as exc:
+            print(
+                f"HANDSHAKE_REJECT candidate={type(exc).__name__}: {exc}",
+                flush=True,
+            )
             continue

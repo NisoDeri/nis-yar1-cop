@@ -114,11 +114,29 @@ class OpponentTransport:
         arg_key, deadline_key, suppress = TOOL_SPEC[tool]
         budget, interval = self._t[deadline_key], self._t["retry_interval"]
         deadline = self._clock() + budget
+        attempt = 0
         while True:
+            attempt += 1
             remaining = deadline - self._clock()
+            print(
+                f"MCP_OUTBOUND attempt={attempt} tool={tool} argument={arg_key}",
+                flush=True,
+            )
             try:
-                return self._caller(self._url, tool, {arg_key: body}, max(remaining, interval))
+                result = self._caller(
+                    self._url, tool, {arg_key: body}, max(remaining, interval)
+                )
+                print(
+                    f"MCP_RESPONSE attempt={attempt} tool={tool} response={result!r}",
+                    flush=True,
+                )
+                return result
             except (httpx.HTTPError, TransportError, OSError) as exc:
+                print(
+                    f"MCP_EXCEPTION attempt={attempt} tool={tool} argument={arg_key} "
+                    f"exception={type(exc).__name__}: {exc}",
+                    flush=True,
+                )
                 if self._clock() + interval >= deadline:
                     if suppress:
                         return None

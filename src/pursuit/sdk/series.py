@@ -20,6 +20,7 @@ from pursuit.exceptions import ConfigError
 from pursuit.peer.runtime import PeerRuntime
 from pursuit.sdk.series_log import (
     LieProfiler,
+    _game_mode,
     emit_artifacts,
     log_document,
     sub_row,
@@ -149,6 +150,7 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
     rows: list[dict[str, int]] = []
     subs: list[dict[str, Any]] = []
     game_id = ""
+    counted_mode = _game_mode(config) == "counted"
     profiler = LieProfiler(config)  # E2 cross-sub-game lie-profiler (default off, non-fatal)
     logs: list[dict[str, Any]] = []  # per-sub-game docs -> the 4-artifact emission
     for number in logical_subgame_numbers(config, role, num_games, alternate):
@@ -184,8 +186,18 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
         logs.append(doc)
         if logs_dir is not None:
             write_json(Path(logs_dir) / my_gid / f"log_{game_id}_g{number:02d}.json", doc)
-        if outcome.result is GameResult.TECHNICAL_LOSS or not outcome.audit.get("passed", False):
+        failed_row = (
+            outcome.result is GameResult.TECHNICAL_LOSS
+            or not outcome.audit.get("passed", False)
+        )
+        if counted_mode and failed_row:
             break
+        if not counted_mode and failed_row:
+            print(
+                f"LIVE role={role_now.value} game={number} "
+                "event=friendly_continuing_unconfirmed",
+                flush=True,
+            )
     summary = {"game_id": game_id, "group_id": my_gid, "num_sub_games": num_games,
                "sub_games": subs, "config_sha256": config.config_sha256(),
                **table.series_totals(rows)}

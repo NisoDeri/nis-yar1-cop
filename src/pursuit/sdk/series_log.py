@@ -442,12 +442,15 @@ def maybe_email(config: Any, summary: dict[str, Any], result: dict[str, Any],
             return
         if any(row.get("result") not in {"capture", "survival", "tie"} for row in rows):
             return
-        if any(not row.get("audit", {}).get("log_verified")
-               or row.get("audit", {}).get("tampered") for row in rows):
-            return
-        if not result.get("mutual_agreement", {}).get("confirmed"):
-            return
         mode = _game_mode(config)
+        if mode == "counted" and any(
+            not row.get("audit", {}).get("log_verified")
+            or row.get("audit", {}).get("tampered")
+            for row in rows
+        ):
+            return
+        if mode == "counted" and not result.get("mutual_agreement", {}).get("confirmed"):
+            return
         if result.get("league") != {
             "counted": mode == "counted", "reason": mode,
         }:

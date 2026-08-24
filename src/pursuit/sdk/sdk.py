@@ -24,6 +24,7 @@ from pursuit.exceptions import ConfigError
 from pursuit.peer.inboxes import PeerInboxes
 from pursuit.peer.watchdog import Watchdog
 from pursuit.sdk.series import run_series
+from pursuit.sdk.series_log import validate_email_routing
 from pursuit.shared.config import ConfigManager
 from pursuit.shared.sysinfo import collect, get_git_commit
 from pursuit.strategy.greedy import GreedyPoliceBrain, GreedyThiefBrain
@@ -157,9 +158,11 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
             "game.first_meeting_between_groups", first_meeting_between_groups
         )
     friendly_strategy = _friendly_strategy_mode(config)
+    recipients = validate_email_routing(config)
     print(
         "LIVE role=setup event=strategy_selected "
-        f"mode={'friendly_dummy_no_learning' if friendly_strategy else 'counted_real'}",
+        f"mode={'friendly_dummy_no_learning' if friendly_strategy else 'counted_real'} "
+        f"email_recipients={','.join(recipients)}",
         flush=True,
     )
     config.validate_agreement()  # fail-fast on any missing agreed term (brief §10)

@@ -395,6 +395,31 @@ def _mode_recipient(config: Any) -> Any:
                             _private_default(config, "email.recipient", None))
 
 
+def _recipient_addresses(config: Any) -> tuple[str, ...]:
+    """Resolve the current mode's envelope recipients in exactly one place."""
+    return tuple(
+        address.strip().lower()
+        for address in str(_mode_recipient(config) or "").split(",")
+        if address.strip()
+    )
+
+
+def validate_email_routing(config: Any) -> tuple[str, ...]:
+    """Fail at kickoff if a friendly can reach the lecturer or a counted run cannot."""
+    if not bool(_private_default(config, "email.enabled", False)):
+        return ()
+    recipients = _recipient_addresses(config)
+    lecturer = "rmisegal+uoh26finalgame@gmail.com"
+    if not recipients:
+        raise ConfigError("email recipient list is empty")
+    if _game_mode(config) == "counted":
+        if lecturer not in recipients:
+            raise ConfigError("counted run must include the exact lecturer recipient")
+    elif lecturer in recipients:
+        raise ConfigError("friendly run must never include the lecturer recipient")
+    return recipients
+
+
 def maybe_email(config: Any, summary: dict[str, Any], result: dict[str, Any],
                 is_emitter: bool = True) -> None:
     """Opt-in (private ``email.enabled``): send the result artifact via the email Gatekeeper.
@@ -440,9 +465,8 @@ def maybe_email(config: Any, summary: dict[str, Any], result: dict[str, Any],
             for commit in row.get("github_commit", {}).values()
         ) for row in rows):
             return
-        if mode == "counted" and _mode_recipient(config) != (
-            "rmisegal+uoh26finalgame@gmail.com"
-        ):
+        recipients = validate_email_routing(config)
+        if mode == "counted" and "rmisegal+uoh26finalgame@gmail.com" not in recipients:
             return
         from pursuit.infra.email import GmailSender
         from pursuit.infra.gatekeeper import Gatekeeper

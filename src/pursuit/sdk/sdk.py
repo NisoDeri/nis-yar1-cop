@@ -27,6 +27,7 @@ from pursuit.sdk.series import run_series
 from pursuit.shared.config import ConfigManager
 from pursuit.shared.sysinfo import collect, get_git_commit
 from pursuit.strategy.greedy import GreedyPoliceBrain, GreedyThiefBrain
+from pursuit.strategy.friendly_dummy import friendly_dummy_brain
 from pursuit.strategy.resolve import resolve_brain
 from pursuit.strategy.talk import TemplateTalk
 
@@ -52,6 +53,15 @@ def _timeouts(config: ConfigManager) -> dict[str, float]:
             "audit_timeout": float(private("network.audit_send_timeout_seconds")),
             "control_timeout": float(_optional(private, "network.control_timeout_seconds",
                                                _CONTROL_TIMEOUT_FALLBACK))}
+
+
+def _friendly_strategy_mode(config: ConfigManager) -> bool:
+    """Disable real strategy/learning whenever the run is an uncounted rehearsal."""
+    friendly = str(_optional(config.private, "game.mode", "friendly")).lower() != "counted"
+    if friendly:
+        config.set_private("strategy.profile_opponent", False)
+        config.set_private("strategy.fuse_hints", False)
+    return friendly
 
 
 def _real_transport(config: ConfigManager, role: Role, inboxes: PeerInboxes) -> Any:
@@ -146,6 +156,12 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
         config.set_private(
             "game.first_meeting_between_groups", first_meeting_between_groups
         )
+    friendly_strategy = _friendly_strategy_mode(config)
+    print(
+        "LIVE role=setup event=strategy_selected "
+        f"mode={'friendly_dummy_no_learning' if friendly_strategy else 'counted_real'}",
+        flush=True,
+    )
     config.validate_agreement()  # fail-fast on any missing agreed term (brief §10)
     my_role = Role(role)
     games = int(num_games if num_games is not None
@@ -182,7 +198,9 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
     try:
         summary = run_series(
             config, my_role, games, transport, inboxes, keypair=keypair,
-            brain_factory=lambda r: resolve_brain(config, r, rng), sysinfo=sysinfo,
+            brain_factory=lambda r: (
+                friendly_dummy_brain(r, rng) if friendly_strategy else resolve_brain(config, r, rng)
+            ), sysinfo=sysinfo,
             github_commit=commit, watchdog=watchdog, observer=observer, alternate=alternate,
             series_gate=series_gate, emit_reports=emit_reports,
             logs_dir=logs_dir if logs_dir is not None

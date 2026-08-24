@@ -141,6 +141,7 @@ def sub_result_row(sub: Mapping[str, Any], game_id: str,
         "tokens": {gid: (sub.get("tokens") or {}).get(gid, 0) for gid in group_ids},
         "score": {gid: sub.get("score", {})[gid] for gid in group_ids
                   if gid in sub.get("score", {})},
+        "steps": int(sub.get("turns_completed", sub.get("steps", 0)) or 0),
         "log_files": {gid: log_filename(game_id, sub.get("sub_game_number", 0))
                       for gid in group_ids},
         "audit": {"log_verified": bool(audit.get("passed", False)),

@@ -150,6 +150,10 @@ def build_result_artifact(series_summary: Mapping[str, Any], group_id: str,
         "timezone": DEFAULT_TIMEZONE,
         "groups": list(group_ids),
         "num_sub_games": len(rows),
+        "league": {
+            "counted": bool(counted),
+            "reason": "counted" if counted else "friendly",
+        },
         "sub_games": rows,
         "final_result": {
             "total_score": dict(series_summary.get("totals", {})),
@@ -169,7 +173,10 @@ def build_result_artifact(series_summary: Mapping[str, Any], group_id: str,
         },
         "mutual_agreement": {
             "sha256": "",
-            "confirmed": all(row["audit"]["log_verified"] for row in rows),
+            "confirmed": all(
+                row["audit"]["log_verified"] and not row["audit"]["tampered"]
+                for row in rows
+            ),
         },
     }
     artifact["mutual_agreement"]["sha256"] = mutual_agreement_signature(artifact)

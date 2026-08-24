@@ -6,6 +6,8 @@ No game params hardcoded — all derived from the passed ``outcome``/``config``.
 from __future__ import annotations
 
 import json
+import re
+import time
 from pathlib import Path
 from typing import Any
 
@@ -205,6 +207,17 @@ def _read_sibling_logs(out_dir: Path, game_id: str) -> list[dict[str, Any]]:
     return docs
 
 
+def _wait_for_complete_logs(out_dir: Path, game_id: str, expected: int,
+                            timeout: float) -> None:
+    deadline = time.monotonic() + max(0.0, timeout)
+    wanted = set(range(1, expected + 1))
+    while time.monotonic() < deadline:
+        present = {_log_number(doc) for doc in _read_sibling_logs(out_dir, game_id)}
+        if wanted <= present:
+            return
+        time.sleep(0.5)
+
+
 def _role(value: Any) -> Role | None:
     try:
         return Role(value)
@@ -304,6 +317,11 @@ def emit_artifacts(config: Any, summary: dict[str, Any], logs: list[dict[str, An
             _num_games = len(summary.get("sub_games", []))
         _own_windows = {int(s.get("sub_game_number", 0)) for s in summary.get("sub_games", [])}
         is_report_emitter = _num_games in _own_windows
+        if is_report_emitter:
+            _wait_for_complete_logs(
+                out_dir, str(summary.get("game_id", "")), _num_games,
+                float(_private_default(config, "network.series_merge_timeout_seconds", 0.0)),
+            )
         summary, logs = _merged_summary(config, summary, logs, out_dir, my_gid, opp)
         artifact_sysinfo = dict(sysinfo)
         try:
@@ -319,6 +337,13 @@ def emit_artifacts(config: Any, summary: dict[str, Any], logs: list[dict[str, An
             opp: int(opponent_identity.get("counted_games_played",
                                            opponent_identity.get("counted_games_so_far", 0)) or 0),
         }
+        summary = {
+            **summary,
+            "first_meeting_between_groups": bool(_private_default(
+                config, "game.first_meeting_between_groups",
+                summary.get("first_meeting_between_groups", True),
+            )),
+        }
         try:
             mcp_servers = config.private("game.mcp_servers")
         except ConfigError:
@@ -326,6 +351,10 @@ def emit_artifacts(config: Any, summary: dict[str, Any], logs: list[dict[str, An
         repos_by_group = {my_gid: config.private("game.repos")}
         if opponent_identity.get("repos"):
             repos_by_group[opp] = dict(opponent_identity.get("repos", {}))
+        else:
+            opponent_repos = _private_default(config, "game.opponent_repos", None)
+            if isinstance(opponent_repos, dict):
+                repos_by_group[opp] = dict(opponent_repos)
         result = build_result_artifact(summary, my_gid, opp, repos_by_group, counted_by_group,
                                        counted=is_counted_game)
         game_id, game_uid = result["game_id"], result["game_uid"]
@@ -382,6 +411,38 @@ def maybe_email(config: Any, summary: dict[str, Any], result: dict[str, Any],
         except Exception:  # noqa: BLE001
             expected = int(summary.get("num_sub_games", 0) or 0)
         if int(result.get("num_sub_games", 0) or 0) < expected:
+            return
+        rows = list(result.get("sub_games", []))
+        if [row.get("sub_game_number") for row in rows] != list(range(1, expected + 1)):
+            return
+        if any(row.get("result") not in {"capture", "survival", "tie"} for row in rows):
+            return
+        if any(not row.get("audit", {}).get("log_verified")
+               or row.get("audit", {}).get("tampered") for row in rows):
+            return
+        if not result.get("mutual_agreement", {}).get("confirmed"):
+            return
+        mode = _game_mode(config)
+        if result.get("league") != {
+            "counted": mode == "counted", "reason": mode,
+        }:
+            return
+        groups = set(result.get("groups", []))
+        github = result.get("links", {}).get("github", {})
+        if not groups or set(github) != groups or any(
+            set(github.get(gid, {})) != {"cop", "thief"} for gid in groups
+        ):
+            return
+        if any(not row.get("started_at") or not row.get("ended_at") for row in rows):
+            return
+        if any(set(row.get("github_commit", {})) != groups or any(
+            re.fullmatch(r"[0-9a-f]{40}", str(commit)) is None
+            for commit in row.get("github_commit", {}).values()
+        ) for row in rows):
+            return
+        if mode == "counted" and _mode_recipient(config) != (
+            "rmisegal+uoh26finalgame@gmail.com"
+        ):
             return
         from pursuit.infra.email import GmailSender
         from pursuit.infra.gatekeeper import Gatekeeper

@@ -115,7 +115,10 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
              logs_dir: str | Path | None = None, sysinfo: dict[str, Any] | None = None,
              github_commit: str | None = None, observer: Any = None,
              alternate: bool = True, scent_dialect: str | None = None,
-             mode: str | None = None, series_gate_dir: str | Path | None = None,
+             mode: str | None = None, series_label: str | None = None,
+             counted_games: int | None = None,
+             first_meeting_between_groups: bool | None = None,
+             series_gate_dir: str | Path | None = None,
              series_gate_timeout: float | None = None) -> dict[str, Any]:
     """Load + validate config, build the stack ONCE, run the series, return its summary.
 
@@ -132,6 +135,16 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
         config.override_game("pheromones.dialect", scent_dialect)
     if mode is not None:
         config.set_private("game.mode", mode)
+    if series_label is not None:
+        config.set_private("game.series_label", series_label)
+    if counted_games is not None:
+        if counted_games < 0:
+            raise ConfigError("counted_games must be a non-negative integer")
+        config.set_private("game.counted_games_so_far", counted_games)
+    if first_meeting_between_groups is not None:
+        config.set_private(
+            "game.first_meeting_between_groups", first_meeting_between_groups
+        )
     config.validate_agreement()  # fail-fast on any missing agreed term (brief §10)
     my_role = Role(role)
     games = int(num_games if num_games is not None

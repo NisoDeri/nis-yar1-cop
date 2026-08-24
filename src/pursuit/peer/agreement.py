@@ -96,6 +96,12 @@ def build_agreement_message(
         "signature": agreement_signature(terms, nonce),
         "identity": build_identity(config, public_pem),
     }
+    counted = int(message["identity"]["counted_games_played"])
+    message["counted_games_played"] = counted
+    message["games_played"] = counted
+    label = _optional_private(config, "game.series_label", None)
+    if label is not None and str(label).strip():
+        message["series_label"] = str(label).strip()
     message.update(build_lock_declarations(config))
     if sub_game_number is not None:
         message["sub_game_number"] = int(sub_game_number)

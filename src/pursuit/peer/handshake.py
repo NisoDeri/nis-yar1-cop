@@ -106,6 +106,27 @@ def _assert_optional_locks(mine: dict[str, Any], theirs: dict[str, Any]) -> None
             )
 
 
+def _series_label(message: dict[str, Any]) -> str | None:
+    value = message.get("series_label", message.get("label"))
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _prior_count(message: dict[str, Any], identity: dict[str, Any]) -> int | None:
+    candidates = [
+        message.get("counted_games_played"),
+        message.get("games_played"),
+        identity.get("counted_games_played"),
+        identity.get("counted_games_so_far"),
+        identity.get("counted_matches_played"),
+    ]
+    counts = {value for value in candidates if _is_int(value)}
+    if len(counts) > 1:
+        raise NegotiationError(
+            f"conflicting opponent counted-game declarations: {sorted(counts)}"
+        )
+    return next(iter(counts), None)
+
+
 def _receive_agreement(inboxes: Inboxes, deadline: float, poll: float, clock, sleep) -> dict:
     while True:
         try:
@@ -175,21 +196,30 @@ def _candidate_handshake(
         raise CryptoError("agreement signature mismatch - refusing to play (INTEROP 4.3b)")
     _assert_optional_locks(mine, theirs)
     _assert_pairing(sub_game_number, role, theirs)
+    my_label, their_label = _series_label(mine), _series_label(theirs)
+    if my_label and their_label and my_label != their_label:
+        raise NegotiationError(
+            f"series label mismatch: ours={my_label!r} theirs={their_label!r}"
+        )
     identity = theirs.get("identity")
     identity = identity if isinstance(identity, dict) else {}
     opponent_gid = identity.get("group_id")
     if not isinstance(opponent_gid, str) or not opponent_gid:
         raise CryptoError("opponent identity missing group_id - cannot derive game ids")
     my_gid = config.private("game.group_id")
-    game_id, game_uid = derive_game_ids(their_terms, [my_gid, opponent_gid])
-    counted = identity.get("counted_games_so_far")
+    game_id, game_uid = derive_game_ids(
+        their_terms, [my_gid, opponent_gid], my_label or their_label
+    )
+    counted = _prior_count(theirs, identity)
+    if counted is not None:
+        identity = {**identity, "counted_games_played": counted}
     return Handshake(
         game_id=game_id,
         game_uid=game_uid,
         terms=their_terms,
         opponent_identity=identity,
         opponent_pubkey=identity.get("ed25519_public_key"),
-        opponent_counted_games=counted if isinstance(counted, int) else None,
+        opponent_counted_games=counted,
     )
 
 

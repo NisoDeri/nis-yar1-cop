@@ -14,7 +14,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from pursuit.constants import Cell, Role
+from pursuit.constants import Cell, GameResult, Role
 from pursuit.domain.scoring import ScoreTable
 from pursuit.exceptions import ConfigError
 from pursuit.peer.runtime import PeerRuntime
@@ -175,6 +175,8 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
         logs.append(doc)
         if logs_dir is not None:
             write_json(Path(logs_dir) / my_gid / f"log_{game_id}_g{number:02d}.json", doc)
+        if outcome.result is GameResult.TECHNICAL_LOSS or not outcome.audit.get("passed", False):
+            break
     summary = {"game_id": game_id, "group_id": my_gid, "num_sub_games": num_games,
                "sub_games": subs, "config_sha256": config.config_sha256(),
                **table.series_totals(rows)}

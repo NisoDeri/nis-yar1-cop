@@ -31,7 +31,9 @@ def _canonical_json(data: dict) -> str:
     return json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
 
 
-def derive_game_ids(terms: dict, group_ids: Sequence[str]) -> tuple[str, str]:
+def derive_game_ids(
+    terms: dict, group_ids: Sequence[str], label: str | None = None
+) -> tuple[str, str]:
     """Derive ``(game_id, game_uid)`` from the signed terms and the two group ids.
 
     Deterministic and order-normalized: both peers call this with the same terms and the
@@ -42,8 +44,16 @@ def derive_game_ids(terms: dict, group_ids: Sequence[str]) -> tuple[str, str]:
     if not terms:
         raise ConfigError("derive_game_ids needs the signed terms dict; got empty terms")
     pair = sorted(group_ids)
-    game_id = f"{pair[0]}-vs-{pair[1]}"
-    seed = f"{_canonical_json(terms)}|{pair[0]}|{pair[1]}"
+    base_id = f"{pair[0]}-vs-{pair[1]}"
+    if label is not None:
+        if not isinstance(label, str):
+            raise ConfigError(f"invalid series label: {label!r}")
+        label = label.strip()
+        if not label or any(ch in label for ch in ("/", "\\", "|")):
+            raise ConfigError(f"invalid series label: {label!r}")
+    game_id = f"{base_id}-{label}" if label else base_id
+    seed_tail = game_id if label else "|".join(pair)
+    seed = f"{_canonical_json(terms)}|{seed_tail}"
     digest = hashlib.sha256(seed.encode("utf-8")).digest()
     game_uid = str(uuid.UUID(bytes=digest[:16]))
     return game_id, game_uid

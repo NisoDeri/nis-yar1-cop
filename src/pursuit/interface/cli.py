@@ -54,6 +54,17 @@ def build_parser() -> argparse.ArgumentParser:
                       help="friendly (report to both teams' inboxes, uncounted) or counted "
                            "(report to the LECTURER alone, +1 counter + diversity reward). "
                            "Default: the config's game.mode (shipped safe default: friendly)")
+    peer.add_argument("--series-label", default=None,
+                      help="unique replay/warm-up label, e.g. counted-1 or friendly-1")
+    peer.add_argument("--counted-games", type=int, default=None,
+                      help="our PRIOR counted-series total (exclusive; sent on the wire)")
+    peer.add_argument("--github-commit", default=None,
+                      help="40-hex commit of this role's separately published repository")
+    meeting = peer.add_mutually_exclusive_group()
+    meeting.add_argument("--first-meeting", dest="first_meeting", action="store_true",
+                         help="this is the first valid counted meeting with the opponent")
+    meeting.add_argument("--not-first-meeting", dest="first_meeting", action="store_false")
+    peer.set_defaults(first_meeting=None)
     peer.add_argument("--series-gate-dir", default=None,
                       help="shared per-launch directory enforcing global sub-game order")
     peer.add_argument("--series-gate-timeout", type=float, default=None,
@@ -88,6 +99,9 @@ def _run_peer(args: argparse.Namespace) -> dict:
     return run_peer(config_dir, args.role, num_games=args.games,
                     fake_opponent=args.fake_opponent, alternate=not args.fixed_role,
                     scent_dialect=args.scent_dialect, mode=args.mode,
+                    series_label=args.series_label, counted_games=args.counted_games,
+                    github_commit=args.github_commit,
+                    first_meeting_between_groups=args.first_meeting,
                     series_gate_dir=args.series_gate_dir,
                     series_gate_timeout=args.series_gate_timeout)
 

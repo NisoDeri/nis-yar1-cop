@@ -135,7 +135,7 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
                keypair: tuple[bytes, bytes], brain_factory: Any, sysinfo: dict[str, Any],
                github_commit: str, watchdog: Any = None, observer: Any = None,
                logs_dir: str | Path | None = None, alternate: bool = True,
-               series_gate: Any = None) -> dict[str, Any]:
+               series_gate: Any = None, emit_reports: bool = True) -> dict[str, Any]:
     """Play ``num_games`` sub-games; aggregate scores + the tie rule; emit logs + email.
 
     ``alternate`` (default True) is the reference role-swap: odd sub-games in my config role,
@@ -196,6 +196,13 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
     )
     if logs_dir is not None:
         write_json(Path(logs_dir) / my_gid / f"series_{game_id}.json", summary)
-        emit_artifacts(config, summary, logs, sysinfo, github_commit, keypair,
-                       Path(logs_dir) / my_gid)
+        if emit_reports:
+            emit_artifacts(config, summary, logs, sysinfo, github_commit, keypair,
+                           Path(logs_dir) / my_gid)
+        else:
+            print(
+                f"LIVE role={role.value} event=report_deferred "
+                "reason=separate_six_log_merge",
+                flush=True,
+            )
     return summary

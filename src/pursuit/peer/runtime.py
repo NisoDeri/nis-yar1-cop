@@ -119,7 +119,13 @@ class PeerRuntime:
         )
         self.log.step0_record(self.config, *self._step0_args, self.keypair,
                               sub_game_number=self.sub_game_number)
-        self.fsm.advance(State.MY_TURN if self.role is Role.THIEF else State.OPP_TURN)
+        first_mover = first_mover_for_subgame(self.sub_game_number)
+        self.fsm.advance(State.MY_TURN if self.role is first_mover else State.OPP_TURN)
+        self._progress(
+            "first_turn_ready",
+            first_mover=first_mover.value,
+            action="send_now" if self.role is first_mover else "wait_for_receive_turn",
+        )
         try:
             result, winner = self._turn_loop()
         except Exception as exc:  # noqa: BLE001 — ANY mid-game crash (timeout/transport/brain/
@@ -222,6 +228,19 @@ class PeerRuntime:
             if (processed.captured is None and self.opponent is Role.POLICE
                     and processed.step >= self.max_moves):
                 return (GameResult.SURVIVAL, Role.THIEF)  # THEIR move ceiling is spent
+
+
+def first_mover_for_subgame(sub_game_number: int | None) -> Role:
+    """Return police for odd windows and thief for even windows.
+
+    ``None`` preserves the legacy single-game/fake-opponent convention for callers
+    that do not declare a logical series window.
+    """
+    if sub_game_number is None:
+        return Role.THIEF
+    if isinstance(sub_game_number, bool) or sub_game_number < 1:
+        raise ValueError("sub_game_number must be a positive integer")
+    return Role.POLICE if sub_game_number % 2 else Role.THIEF
 
 
 def _end_state_digest(role: Role, result: GameResult, winner: Role | None,

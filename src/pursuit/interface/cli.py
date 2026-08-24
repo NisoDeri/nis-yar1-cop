@@ -68,6 +68,8 @@ def build_parser() -> argparse.ArgumentParser:
     peer.set_defaults(first_meeting=None)
     peer.add_argument("--post-series-listen-seconds", type=int, default=0,
                       help="keep MCP listener alive after printing the final result")
+    peer.add_argument("--defer-report", action="store_true",
+                      help="write role logs only; a separate six-log merge files once")
     peer.add_argument("--series-gate-dir", default=None,
                       help="shared per-launch directory enforcing global sub-game order")
     peer.add_argument("--series-gate-timeout", type=float, default=None,
@@ -106,7 +108,8 @@ def _run_peer(args: argparse.Namespace) -> dict:
                     github_commit=args.github_commit,
                     first_meeting_between_groups=args.first_meeting,
                     series_gate_dir=args.series_gate_dir,
-                    series_gate_timeout=args.series_gate_timeout)
+                    series_gate_timeout=args.series_gate_timeout,
+                    emit_reports=not args.defer_report)
 
 
 def _run_lab(args: argparse.Namespace) -> dict:

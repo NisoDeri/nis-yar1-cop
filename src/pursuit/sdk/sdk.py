@@ -119,7 +119,8 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
              counted_games: int | None = None,
              first_meeting_between_groups: bool | None = None,
              series_gate_dir: str | Path | None = None,
-             series_gate_timeout: float | None = None) -> dict[str, Any]:
+             series_gate_timeout: float | None = None,
+             emit_reports: bool = True) -> dict[str, Any]:
     """Load + validate config, build the stack ONCE, run the series, return its summary.
 
     ``scent_dialect`` (optional) overrides ``pheromones.dialect`` at runtime — the
@@ -183,7 +184,7 @@ def run_peer(config_dir: str | Path, role: Role | str, num_games: int | None = N
             config, my_role, games, transport, inboxes, keypair=keypair,
             brain_factory=lambda r: resolve_brain(config, r, rng), sysinfo=sysinfo,
             github_commit=commit, watchdog=watchdog, observer=observer, alternate=alternate,
-            series_gate=series_gate,
+            series_gate=series_gate, emit_reports=emit_reports,
             logs_dir=logs_dir if logs_dir is not None
             else _optional(config.private, "paths.logs_dir", "logs"))
     finally:

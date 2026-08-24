@@ -119,12 +119,22 @@ def _prior_count(message: dict[str, Any], identity: dict[str, Any]) -> int | Non
         identity.get("counted_games_so_far"),
         identity.get("counted_matches_played"),
     ]
-    counts = {value for value in candidates if _is_int(value)}
+    counts = {_coerce_prior_count(value) for value in candidates}
+    counts.discard(None)
     if len(counts) > 1:
         raise NegotiationError(
             f"conflicting opponent counted-game declarations: {sorted(counts)}"
         )
     return next(iter(counts), None)
+
+
+def _coerce_prior_count(value: Any) -> int | None:
+    """Accept a non-negative integer or decimal numeric string; ignore booleans."""
+    if _is_int(value):
+        return value if value >= 0 else None
+    if isinstance(value, str) and value.strip().isdigit():
+        return int(value.strip())
+    return None
 
 
 def _receive_agreement(inboxes: Inboxes, deadline: float, poll: float, clock, sleep) -> dict:

@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 
 from pursuit.exceptions import PursuitError
@@ -65,6 +66,8 @@ def build_parser() -> argparse.ArgumentParser:
                          help="this is the first valid counted meeting with the opponent")
     meeting.add_argument("--not-first-meeting", dest="first_meeting", action="store_false")
     peer.set_defaults(first_meeting=None)
+    peer.add_argument("--post-series-listen-seconds", type=int, default=0,
+                      help="keep MCP listener alive after printing the final result")
     peer.add_argument("--series-gate-dir", default=None,
                       help="shared per-launch directory enforcing global sub-game order")
     peer.add_argument("--series-gate-timeout", type=float, default=None,
@@ -127,5 +130,12 @@ def main(argv: list[str] | None = None) -> int:
     except PursuitError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    print(json.dumps(summary, ensure_ascii=False, indent=2, default=str))
+    print(json.dumps(summary, ensure_ascii=False, indent=2, default=str), flush=True)
+    if args.command == "peer" and args.post_series_listen_seconds > 0:
+        print(
+            f"LIVE role={args.role} event=post_series_listening "
+            f"seconds={args.post_series_listen_seconds}",
+            flush=True,
+        )
+        time.sleep(args.post_series_listen_seconds)
     return 0

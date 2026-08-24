@@ -163,6 +163,15 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
                               counted_games=counted_games(config), watchdog=watchdog,
                               observer=observer, sub_game_number=number)
         outcome = runtime.run()
+        print(
+            f"LIVE role={role_now.value} game={number} event=subgame_result "
+            f"result={outcome.result.value} "
+            f"winner={None if outcome.winner is None else outcome.winner.value} "
+            f"score_police={outcome.scores[Role.POLICE]} "
+            f"score_thief={outcome.scores[Role.THIEF]} "
+            f"audit_passed={bool(outcome.audit.get('passed', False))}",
+            flush=True,
+        )
         if series_gate is not None:
             series_gate.complete(number)
         game_id = outcome.game_id
@@ -180,6 +189,11 @@ def run_series(config: Any, role: Role, num_games: int, transport: Any, inboxes:
     summary = {"game_id": game_id, "group_id": my_gid, "num_sub_games": num_games,
                "sub_games": subs, "config_sha256": config.config_sha256(),
                **table.series_totals(rows)}
+    print(
+        f"LIVE role={role.value} event=series_result completed={len(subs)}/{num_games} "
+        f"winner={summary['winner']} tie={summary['tie']} totals={summary['totals']}",
+        flush=True,
+    )
     if logs_dir is not None:
         write_json(Path(logs_dir) / my_gid / f"series_{game_id}.json", summary)
         emit_artifacts(config, summary, logs, sysinfo, github_commit, keypair,

@@ -142,7 +142,9 @@ class AuditPayload:
 
     @classmethod
     def from_wire(cls, data: dict[str, Any]) -> AuditPayload:
-        validate_envelope(data, _AUDIT_SPEC, _AUDIT_SPEC, "AuditPayload")
+        # Required fields remain typed; peer-specific top-level metadata such as
+        # ``result_detail`` is an interoperable extension and must not reject disclosure.
+        validate_envelope(data, _AUDIT_SPEC, None, "AuditPayload")
         require_role(data["sender"], "AuditPayload")
         if data["result_claim"] not in RESULT_CLAIMS:
             raise TransportError(f"AuditPayload result_claim not in {sorted(RESULT_CLAIMS)}")
